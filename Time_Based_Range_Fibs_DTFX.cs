@@ -251,8 +251,9 @@ namespace Time_Based_Range_Fibs_DTFX
 
                     using (Pen pen = new Pen(sessionColor, 1))
                     {
-                        graphics.DrawLine(pen, xStart, yHigh, xEnd, yHigh);
-                        graphics.DrawLine(pen, xStart, yLow, xEnd, yLow);
+                        graphics.DrawLine(pen, xStart, yHigh, xEnd, yHigh); // Top border
+                        graphics.DrawLine(pen, xStart, yLow, xEnd, yLow);   // Bottom border
+                        graphics.DrawLine(pen, xStart, yHigh, xStart, yLow); // Left border
                     }
 
                     // Draw Fib levels
@@ -273,7 +274,7 @@ namespace Time_Based_Range_Fibs_DTFX
                                 DashStyle = ConvertLineStyleToDashStyle(LineOptions_Fib.LineStyle)
                             }, xStart, yFib, xEnd, yFib);
 
-                            DrawFibLabel(graphics, $"{(int)(p * 100)}%", xStart, yFib);
+                            DrawFibLabel(graphics, $"{(int)(p * 100)}%", xStart + 2, yFib);
                         }
                     }
 
