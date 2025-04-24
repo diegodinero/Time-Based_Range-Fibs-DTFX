@@ -273,7 +273,7 @@ namespace Time_Based_Range_Fibs_DTFX
                                 DashStyle = ConvertLineStyleToDashStyle(LineOptions_Fib.LineStyle)
                             }, xStart, yFib, xEnd, yFib);
 
-                            DrawFibLabel(graphics, $"{(int)(p * 100)}%", xStart - 40, yFib);
+                            DrawFibLabel(graphics, $"{(int)(p * 100)}%", xStart, yFib);
                         }
                     }
 
