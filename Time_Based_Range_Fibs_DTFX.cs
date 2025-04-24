@@ -278,10 +278,18 @@ namespace Time_Based_Range_Fibs_DTFX
                         }
                     }
 
-                    // Emoji
+                    // Emoji with session-specific color
                     float emojiY = yHigh - 20;
-                    float xCenter = xStart + 5; // align emoji directly above session start candle
-                    graphics.DrawString(session.Label, emojiFont, Brushes.CornflowerBlue, xCenter, emojiY, stringFormat);
+                    float xCenter = xStart + 5;
+
+                    Brush emojiBrush = session.Key == "Morning"
+                        ? new SolidBrush(Color.Yellow)
+                        : new SolidBrush(Color.CornflowerBlue);
+
+                    graphics.DrawString(session.Label, emojiFont, emojiBrush, xCenter, emojiY, stringFormat);
+
+                    // Dispose the brush if you're managing resources tightly
+                    emojiBrush.Dispose();
 
                 }
             }
