@@ -147,10 +147,18 @@ namespace Time_Based_Range_Fibs_DTFX
                 DateTime date = estBar.Date;
 
                 foreach (var sess in new[]
-                {
-                    new { Label="☀️", Start=MorningStart,   End=MorningEnd,   Show=ShowMorningBox,   Key="Morning"   },
-                    new { Label="🏧", Start=AfternoonStart, End=AfternoonEnd, Show=ShowAfternoonBox, Key="Afternoon" }
-                })
+                         {
+                             new
+                             {
+                                 Label = "☀️", Start = MorningStart, End = MorningEnd, Show = ShowMorningBox,
+                                 Key = "Morning"
+                             },
+                             new
+                             {
+                                 Label = "🏧", Start = AfternoonStart, End = AfternoonEnd, Show = ShowAfternoonBox,
+                                 Key = "Afternoon"
+                             }
+                         })
                 {
                     if (!sess.Show || estBar.TimeOfDay != sess.Start)
                         continue;
@@ -161,7 +169,7 @@ namespace Time_Based_Range_Fibs_DTFX
                     // session UTC window
                     DateTime sEst = date.Add(sess.Start), eEst = date.Add(sess.End);
                     DateTime sUtc = TimeZoneInfo.ConvertTimeToUtc(sEst, estZone),
-                             eUtc = TimeZoneInfo.ConvertTimeToUtc(eEst, estZone);
+                        eUtc = TimeZoneInfo.ConvertTimeToUtc(eEst, estZone);
 
                     // 1) find high/low
                     double high = double.MinValue, low = double.MaxValue;
@@ -177,6 +185,7 @@ namespace Time_Based_Range_Fibs_DTFX
                         high = Math.Max(high, b2.High);
                         low = Math.Min(low, b2.Low);
                     }
+
                     if (high == double.MinValue || low == double.MaxValue)
                         continue;
 
@@ -188,8 +197,19 @@ namespace Time_Based_Range_Fibs_DTFX
                         if (HistoricalData[j, SeekOriginHistory.Begin] is not HistoryItemBar b3) continue;
                         var t3 = TimeZoneInfo.ConvertTime(b3.TimeLeft, TimeZoneInfo.Utc, estZone);
                         if (t3 <= eEst) continue;
-                        if (b3.Close > high) { up = true; firstIdx = j; break; }
-                        if (b3.Close < low) { down = true; firstIdx = j; break; }
+                        if (b3.Close > high)
+                        {
+                            up = true;
+                            firstIdx = j;
+                            break;
+                        }
+
+                        if (b3.Close < low)
+                        {
+                            down = true;
+                            firstIdx = j;
+                            break;
+                        }
                     }
 
                     // 3) 100% mitigation
@@ -200,8 +220,19 @@ namespace Time_Based_Range_Fibs_DTFX
                         for (int k = firstIdx + 1; k < HistoricalData.Count; k++)
                         {
                             if (HistoricalData[k, SeekOriginHistory.Begin] is not HistoryItemBar mb) continue;
-                            if (up && mb.Close < low) { mitigated = true; mitUtc = mb.TimeLeft; break; }
-                            if (down && mb.Close > high) { mitigated = true; mitUtc = mb.TimeLeft; break; }
+                            if (up && mb.Close < low)
+                            {
+                                mitigated = true;
+                                mitUtc = mb.TimeLeft;
+                                break;
+                            }
+
+                            if (down && mb.Close > high)
+                            {
+                                mitigated = true;
+                                mitUtc = mb.TimeLeft;
+                                break;
+                            }
                         }
                     }
 
@@ -224,15 +255,15 @@ namespace Time_Based_Range_Fibs_DTFX
 
             // apply limits
             var unmit = all.Where(b => !b.Mitigated)
-                           .OrderByDescending(b => b.Date)
-                           .Take(MaxUnmitigatedBoxes);
+                .OrderByDescending(b => b.Date)
+                .Take(MaxUnmitigatedBoxes);
             var mit = all.Where(b => b.Mitigated)
-                           .OrderByDescending(b => b.Date)
-                           .Take(MaxMitigatedBoxes);
+                .OrderByDescending(b => b.Date)
+                .Take(MaxMitigatedBoxes);
 
             var toDraw = unmit.Concat(mit)
-                              .OrderBy(b => b.Date)
-                              .ThenBy(b => b.Key);
+                .OrderBy(b => b.Date)
+                .ThenBy(b => b.Key);
 
             // draw
             foreach (var b in toDraw)
@@ -244,8 +275,8 @@ namespace Time_Based_Range_Fibs_DTFX
                 float y2 = (float)conv.GetChartY(b.Low);
 
                 Color col = b.BrokeAbove ? BullBoxColor
-                          : b.BrokeBelow ? BearBoxColor
-                          : Color.Gray;
+                    : b.BrokeBelow ? BearBoxColor
+                    : Color.Gray;
 
                 using var fill = new SolidBrush(Color.FromArgb(60, col));
                 gfx.FillRectangle(fill, x1, y1, x2 - x1, y2 - y1);
@@ -257,8 +288,8 @@ namespace Time_Based_Range_Fibs_DTFX
                 foreach (var p in new float[] { 0.3f, 0.5f, 0.7f })
                 {
                     bool show = (p == 0.3f && ShowThirty)
-                             || (p == 0.5f && ShowFifty)
-                             || (p == 0.7f && ShowSeventy);
+                                || (p == 0.5f && ShowFifty)
+                                || (p == 0.7f && ShowSeventy);
                     if (!show) continue;
                     double price = b.High - range * p;
                     float yF = (float)conv.GetChartY(price);
@@ -270,10 +301,41 @@ namespace Time_Based_Range_Fibs_DTFX
                     DrawFibLabel(gfx, $"{(int)(p * 100)}%", x1 + 2, yF);
                 }
 
-                // emoji
-                float ex = x1 + 5, ey = y1 - 20;
+                // compute emoji position
+                float ex = x1 + 5;
+                float ey = y1 - 20;
+
+                // 1) draw the date (MM-dd) directly above the emoji
+                string dateText = b.Date.ToString("MM-dd");
+                using var dateBrush = new SolidBrush(Color.White);
+                SizeF dateSize = gfx.MeasureString(dateText, fibLabelFont);
+
+                // dateX = same center as emoji; dateY = just above emoji
+                float dateX = ex;
+                float dateY = ey
+                              - emojiFont.Height // move up by the emoji font height
+                              - (dateSize.Height * 0.5f) // center the date text above
+                              - 2; // a tiny gap
+
+                gfx.DrawString(
+                    dateText,
+                    fibLabelFont,
+                    dateBrush,
+                    dateX,
+                    dateY,
+                    stringFormat
+                );
+
+                // 2) draw the emoji itself
                 using var eb = new SolidBrush(b.Key == "Morning" ? Color.Yellow : Color.CornflowerBlue);
-                gfx.DrawString(b.Label, emojiFont, eb, ex, ey, stringFormat);
+                gfx.DrawString(
+                    b.Label,
+                    emojiFont,
+                    eb,
+                    ex,
+                    ey,
+                    stringFormat
+                );
             }
         }
 
