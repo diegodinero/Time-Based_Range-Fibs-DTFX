@@ -1,4 +1,6 @@
-﻿using System;
+﻿// Copyright QUANTOWER LLC. © 2017-2025. All rights reserved.
+
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -10,45 +12,43 @@ namespace Time_Based_Range_Fibs_DTFX
 {
     public class Time_Based_Range_Fibs_DTFX : Indicator
     {
+        //–– Drawing helpers
         private Font emojiFont;
-        private StringFormat stringFormat;
         private Font fibLabelFont;
+        private StringFormat stringFormat;
+        private HistoricalData hoursHistory;
 
+        //–– Session times
         [InputParameter("Morning Session Start Time")]
         private TimeSpan MorningStart = new TimeSpan(9, 0, 0);
-
         [InputParameter("Morning Session End Time")]
         private TimeSpan MorningEnd = new TimeSpan(10, 0, 0);
-
         [InputParameter("Afternoon Session Start Time")]
         private TimeSpan AfternoonStart = new TimeSpan(15, 0, 0);
-
         [InputParameter("Afternoon Session End Time")]
         private TimeSpan AfternoonEnd = new TimeSpan(16, 0, 0);
 
+        //–– Show toggles
         [InputParameter("Show Morning Box")]
         private bool ShowMorningBox = true;
-
         [InputParameter("Show Afternoon Box")]
         private bool ShowAfternoonBox = true;
 
+        //–– Fibonacci toggles
         [InputParameter("Show 30% Retracement")]
-        private bool Show_Thirty_Retracements = true;
-
+        private bool ShowThirty = true;
         [InputParameter("Show 50% Retracement")]
-        private bool Show_Fifty_Retracements = true;
-
+        private bool ShowFifty = true;
         [InputParameter("Show 70% Retracement")]
-        private bool Show_Seventy_Retracements = true;
+        private bool ShowSeventy = true;
 
+        //–– Colors & line style
         [InputParameter("Bullish Box Color", 1)]
         public Color BullBoxColor = Color.LimeGreen;
-
         [InputParameter("Bearish Box Color", 2)]
         public Color BearBoxColor = Color.Red;
-
         [InputParameter("Fib Line Color", 3)]
-        private LineOptions LineOptions_Fib = new LineOptions()
+        private LineOptions FibLineStyle = new LineOptions()
         {
             Color = Color.Yellow,
             LineStyle = LineStyle.Dash,
@@ -56,292 +56,264 @@ namespace Time_Based_Range_Fibs_DTFX
             WithCheckBox = false
         };
 
-        [InputParameter("Extension Length (in pixels)", 10)]
-        private int ExtensionLength = 150;
+        //–– New limits
+        [InputParameter("Max Unmitigated Boxes", 4)]
+        private int MaxUnmitigatedBoxes = 5;
+        [InputParameter("Max Mitigated Boxes", 5)]
+        private int MaxMitigatedBoxes = 5;
 
-        private HistoricalData hoursHistory;
-
-        public Time_Based_Range_Fibs_DTFX()
-            : base()
+        public Time_Based_Range_Fibs_DTFX() : base()
         {
             Name = "Time_Based_Range_Fibs_DTFX3";
-            Description = "This indicator overlays time-specific price range boxes and Fibonacci retracement levels on your chart.";
+            Description = "Overlays session-range boxes and Fibonacci levels, extending until 100% mitigation.";
             SeparateWindow = false;
         }
 
         protected override void OnInit()
         {
-            this.fibLabelFont = new Font("Segoe UI", 8, FontStyle.Bold);
-            this.hoursHistory = this.Symbol.GetHistory(Period.HOUR1, this.Symbol.HistoryType, DateTime.UtcNow.AddDays(-5));
-            this.emojiFont = new Font("Segoe UI Emoji", 12, FontStyle.Bold);
-            this.stringFormat = new StringFormat()
+            fibLabelFont = new Font("Segoe UI", 8, FontStyle.Bold);
+            hoursHistory = Symbol.GetHistory(Period.HOUR1, Symbol.HistoryType, DateTime.UtcNow.AddDays(-5));
+            emojiFont = new Font("Segoe UI Emoji", 12, FontStyle.Bold);
+            stringFormat = new StringFormat()
             {
-                LineAlignment = StringAlignment.Center,
-                Alignment = StringAlignment.Center
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
             };
-
         }
-
 
         public override IList<SettingItem> Settings
         {
             get
             {
+                // allow editing of session times
                 var settings = base.Settings;
-                var defaultSeparator = settings.FirstOrDefault()?.SeparatorGroup;
+                var sep = settings.FirstOrDefault()?.SeparatorGroup;
 
                 settings.Add(new SettingItemDateTime("Morning Session Start Time", DateTime.Today.Add(MorningStart))
                 {
-                    SeparatorGroup = defaultSeparator,
+                    SeparatorGroup = sep,
                     Format = DatePickerFormat.Time
                 });
-
                 settings.Add(new SettingItemDateTime("Morning Session End Time", DateTime.Today.Add(MorningEnd))
                 {
-                    SeparatorGroup = defaultSeparator,
+                    SeparatorGroup = sep,
                     Format = DatePickerFormat.Time
                 });
-
                 settings.Add(new SettingItemDateTime("Afternoon Session Start Time", DateTime.Today.Add(AfternoonStart))
                 {
-                    SeparatorGroup = defaultSeparator,
+                    SeparatorGroup = sep,
                     Format = DatePickerFormat.Time
                 });
-
                 settings.Add(new SettingItemDateTime("Afternoon Session End Time", DateTime.Today.Add(AfternoonEnd))
                 {
-                    SeparatorGroup = defaultSeparator,
+                    SeparatorGroup = sep,
                     Format = DatePickerFormat.Time
                 });
 
                 return settings;
             }
-
             set
             {
                 base.Settings = value;
-
-                if (value.TryGetValue("Morning Session Start Time", out DateTime morningStart))
-                    MorningStart = morningStart.TimeOfDay;
-
-                if (value.TryGetValue("Morning Session End Time", out DateTime morningEnd))
-                    MorningEnd = morningEnd.TimeOfDay;
-
-                if (value.TryGetValue("Afternoon Session Start Time", out DateTime afternoonStart))
-                    AfternoonStart = afternoonStart.TimeOfDay;
-
-                if (value.TryGetValue("Afternoon Session End Time", out DateTime afternoonEnd))
-                    AfternoonEnd = afternoonEnd.TimeOfDay;
-
+                if (value.TryGetValue("Morning Session Start Time", out DateTime ms)) MorningStart = ms.TimeOfDay;
+                if (value.TryGetValue("Morning Session End Time", out DateTime me)) MorningEnd = me.TimeOfDay;
+                if (value.TryGetValue("Afternoon Session Start Time", out DateTime as_)) AfternoonStart = as_.TimeOfDay;
+                if (value.TryGetValue("Afternoon Session End Time", out DateTime ae)) AfternoonEnd = ae.TimeOfDay;
+                Refresh();
             }
         }
 
         public override void OnPaintChart(PaintChartEventArgs args)
         {
-
             base.OnPaintChart(args);
-
-            if (this.CurrentChart == null)
+            if (CurrentChart == null)
                 return;
 
-            Graphics graphics = args.Graphics;
-            var mainWindow = this.CurrentChart.MainWindow;
+            var gfx = args.Graphics;
+            var wnd = CurrentChart.MainWindow;
+            var conv = wnd.CoordinatesConverter;
+            DateTime rightTime = conv.GetTime(wnd.ClientRectangle.Right);
+            var estZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
 
-            DateTime leftTime = mainWindow.CoordinatesConverter.GetTime(mainWindow.ClientRectangle.Left);
-            DateTime rightTime = mainWindow.CoordinatesConverter.GetTime(mainWindow.ClientRectangle.Right);
-            TimeZoneInfo estZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            // collect all session boxes
+            var all = new List<SessionBox>();
 
-            HashSet<(DateTime Date, string SessionType)> drawnSessions = new();
-
-            for (int i = 0; i < this.HistoricalData.Count; i++)
+            for (int i = 0; i < HistoricalData.Count; i++)
             {
-                if (this.HistoricalData[i, SeekOriginHistory.Begin] is not HistoryItemBar bar)
+                if (HistoricalData[i, SeekOriginHistory.Begin] is not HistoryItemBar bar)
                     continue;
 
-                DateTime estTime = TimeZoneInfo.ConvertTime(bar.TimeLeft, TimeZoneInfo.Utc, estZone);
-                DateTime date = estTime.Date;
+                DateTime estBar = TimeZoneInfo.ConvertTime(bar.TimeLeft, TimeZoneInfo.Utc, estZone);
+                DateTime date = estBar.Date;
 
-                foreach (var session in new[]
+                foreach (var sess in new[]
                 {
-            new { Label = "☀️", Start = MorningStart, End = MorningEnd, Show = ShowMorningBox, Key = "Morning" },
-            new { Label = "🏧", Start = AfternoonStart, End = AfternoonEnd, Show = ShowAfternoonBox, Key = "Afternoon" }
-        })
+                    new { Label="☀️", Start=MorningStart,   End=MorningEnd,   Show=ShowMorningBox,   Key="Morning"   },
+                    new { Label="🏧", Start=AfternoonStart, End=AfternoonEnd, Show=ShowAfternoonBox, Key="Afternoon" }
+                })
                 {
-                    if (!session.Show || estTime.TimeOfDay != session.Start)
+                    if (!sess.Show || estBar.TimeOfDay != sess.Start)
                         continue;
 
-                    var sessionKey = (date, session.Key);
-                    if (drawnSessions.Contains(sessionKey))
+                    if (all.Any(b => b.Date == date && b.Key == sess.Key))
                         continue;
 
-                    drawnSessions.Add(sessionKey);
+                    // session UTC window
+                    DateTime sEst = date.Add(sess.Start), eEst = date.Add(sess.End);
+                    DateTime sUtc = TimeZoneInfo.ConvertTimeToUtc(sEst, estZone),
+                             eUtc = TimeZoneInfo.ConvertTimeToUtc(eEst, estZone);
 
-                    DateTime sessionStartEst = date.Add(session.Start);
-                    DateTime sessionEndEst = date.Add(session.End);
-                    DateTime sessionStartUtc = TimeZoneInfo.ConvertTimeToUtc(sessionStartEst, estZone);
-                    DateTime sessionEndUtc = TimeZoneInfo.ConvertTimeToUtc(sessionEndEst, estZone);
-
-                    // Get high and low within the session and the first candle for direction
-                    double high = double.MinValue;
-                    double low = double.MaxValue;
-                    HistoryItemBar? firstBarInSession = null;
-
-                    for (int j = 0; j < this.HistoricalData.Count; j++)
+                    // 1) find high/low
+                    double high = double.MinValue, low = double.MaxValue;
+                    for (int j = 0; j < HistoricalData.Count; j++)
                     {
-                        if (this.HistoricalData[j, SeekOriginHistory.Begin] is not HistoryItemBar b)
+                        if (HistoricalData[j, SeekOriginHistory.Begin] is not HistoryItemBar b2)
                             continue;
 
-                        DateTime bEstTime = TimeZoneInfo.ConvertTime(b.TimeLeft, TimeZoneInfo.Utc, estZone);
+                        DateTime t2 = TimeZoneInfo.ConvertTime(b2.TimeLeft, TimeZoneInfo.Utc, estZone);
+                        if (t2 < sEst || t2 >= eEst)
+                            continue;
 
-                        if (bEstTime >= sessionStartEst && bEstTime < sessionEndEst)
-                        {
-                            high = Math.Max(high, b.High);
-                            low = Math.Min(low, b.Low);
-
-                            if (firstBarInSession == null)
-                                firstBarInSession = b;
-                        }
+                        high = Math.Max(high, b2.High);
+                        low = Math.Min(low, b2.Low);
                     }
-
-                    if (high == double.MinValue || low == double.MaxValue || firstBarInSession == null)
+                    if (high == double.MinValue || low == double.MaxValue)
                         continue;
 
-                    // Determine breakout direction after session ends
-                    bool brokeAbove = false;
-                    bool brokeBelow = false;
-
-                    for (int j = 0; j < this.HistoricalData.Count; j++)
+                    // 2) first breakout
+                    bool up = false, down = false;
+                    int firstIdx = -1;
+                    for (int j = 0; j < HistoricalData.Count; j++)
                     {
-                        if (this.HistoricalData[j, SeekOriginHistory.Begin] is not HistoryItemBar b)
-                            continue;
-
-                        DateTime bEstTime = TimeZoneInfo.ConvertTime(b.TimeLeft, TimeZoneInfo.Utc, estZone);
-                        if (bEstTime <= sessionEndEst)
-                            continue;
-
-                        if (b.Close > high)
-                        {
-                            brokeAbove = true;
-                            break;
-                        }
-                        else if (b.Close < low)
-                        {
-                            brokeBelow = true;
-                            break;
-                        }
+                        if (HistoricalData[j, SeekOriginHistory.Begin] is not HistoryItemBar b3) continue;
+                        var t3 = TimeZoneInfo.ConvertTime(b3.TimeLeft, TimeZoneInfo.Utc, estZone);
+                        if (t3 <= eEst) continue;
+                        if (b3.Close > high) { up = true; firstIdx = j; break; }
+                        if (b3.Close < low) { down = true; firstIdx = j; break; }
                     }
 
-                    Color sessionColor = Color.Gray; // fallback if no breakout
-                    if (brokeAbove)
-                        sessionColor = BullBoxColor;
-                    else if (brokeBelow)
-                        sessionColor = BearBoxColor;
-
-                    Color fillColor = Color.FromArgb(60, sessionColor);
-
-                    float xStart = (float)mainWindow.CoordinatesConverter.GetChartX(sessionStartUtc);
-                    float xEnd = xStart + ExtensionLength;
-
-                    float yHigh = (float)mainWindow.CoordinatesConverter.GetChartY(high);
-                    float yLow = (float)mainWindow.CoordinatesConverter.GetChartY(low);
-                    float rectHeight = yLow - yHigh;
-
-                    using (SolidBrush fill = new SolidBrush(fillColor))
-                        graphics.FillRectangle(fill, xStart, yHigh, xEnd - xStart, rectHeight);
-
-                    using (Pen pen = new Pen(sessionColor, 1))
+                    // 3) 100% mitigation
+                    bool mitigated = false;
+                    DateTime mitUtc = DateTime.MinValue;
+                    if (firstIdx >= 0)
                     {
-                        graphics.DrawLine(pen, xStart, yHigh, xEnd, yHigh); // Top border
-                        graphics.DrawLine(pen, xStart, yLow, xEnd, yLow);   // Bottom border
-                        graphics.DrawLine(pen, xStart, yHigh, xStart, yLow); // Left border
-                    }
-
-                    // Draw Fib levels
-                    double range = high - low;
-                    float[] levels = new float[] { 0.3f, 0.5f, 0.7f };
-
-                    foreach (var p in levels)
-                    {
-                        if ((p == 0.3f && Show_Thirty_Retracements) ||
-                            (p == 0.5f && Show_Fifty_Retracements) ||
-                            (p == 0.7f && Show_Seventy_Retracements))
+                        for (int k = firstIdx + 1; k < HistoricalData.Count; k++)
                         {
-                            double fib = high - (range * p);
-                            float yFib = (float)mainWindow.CoordinatesConverter.GetChartY(fib);
-
-                            graphics.DrawLine(new Pen(LineOptions_Fib.Color, LineOptions_Fib.Width)
-                            {
-                                DashStyle = ConvertLineStyleToDashStyle(LineOptions_Fib.LineStyle)
-                            }, xStart, yFib, xEnd, yFib);
-
-                            DrawFibLabel(graphics, $"{(int)(p * 100)}%", xStart + 2, yFib);
+                            if (HistoricalData[k, SeekOriginHistory.Begin] is not HistoryItemBar mb) continue;
+                            if (up && mb.Close < low) { mitigated = true; mitUtc = mb.TimeLeft; break; }
+                            if (down && mb.Close > high) { mitigated = true; mitUtc = mb.TimeLeft; break; }
                         }
                     }
 
-                    // Emoji with session-specific color
-                    float emojiY = yHigh - 20;
-                    float xCenter = xStart + 5;
-
-                    Brush emojiBrush = session.Key == "Morning"
-                        ? new SolidBrush(Color.Yellow)
-                        : new SolidBrush(Color.CornflowerBlue);
-
-                    graphics.DrawString(session.Label, emojiFont, emojiBrush, xCenter, emojiY, stringFormat);
-
-                    // Dispose the brush if you're managing resources tightly
-                    emojiBrush.Dispose();
-
+                    // store
+                    all.Add(new SessionBox
+                    {
+                        Date = date,
+                        Key = sess.Key,
+                        Label = sess.Label,
+                        High = high,
+                        Low = low,
+                        BrokeAbove = up,
+                        BrokeBelow = down,
+                        Mitigated = mitigated,
+                        StartUtc = sUtc,
+                        MitigationUtc = mitUtc
+                    });
                 }
             }
-        }
 
+            // apply limits
+            var unmit = all.Where(b => !b.Mitigated)
+                           .OrderByDescending(b => b.Date)
+                           .Take(MaxUnmitigatedBoxes);
+            var mit = all.Where(b => b.Mitigated)
+                           .OrderByDescending(b => b.Date)
+                           .Take(MaxMitigatedBoxes);
 
+            var toDraw = unmit.Concat(mit)
+                              .OrderBy(b => b.Date)
+                              .ThenBy(b => b.Key);
 
-
-
-        private DashStyle ConvertLineStyleToDashStyle(LineStyle lineStyle)
-        {
-            switch (lineStyle)
+            // draw
+            foreach (var b in toDraw)
             {
-                case LineStyle.Solid:
-                    return DashStyle.Solid;
-                case LineStyle.Dash:
-                    return DashStyle.Dash;
-                case LineStyle.Dot:
-                    return DashStyle.Dot;
-                case LineStyle.DashDot:
-                    return DashStyle.DashDot;
-                default:
-                    return DashStyle.Solid;
+                float x1 = (float)conv.GetChartX(b.StartUtc);
+                DateTime endUtc = b.Mitigated ? b.MitigationUtc : rightTime;
+                float x2 = (float)conv.GetChartX(endUtc);
+                float y1 = (float)conv.GetChartY(b.High);
+                float y2 = (float)conv.GetChartY(b.Low);
+
+                Color col = b.BrokeAbove ? BullBoxColor
+                          : b.BrokeBelow ? BearBoxColor
+                          : Color.Gray;
+
+                using var fill = new SolidBrush(Color.FromArgb(60, col));
+                gfx.FillRectangle(fill, x1, y1, x2 - x1, y2 - y1);
+                using var pen = new Pen(col, 1);
+                gfx.DrawRectangle(pen, x1, y1, x2 - x1, y2 - y1);
+
+                // fib levels
+                double range = b.High - b.Low;
+                foreach (var p in new float[] { 0.3f, 0.5f, 0.7f })
+                {
+                    bool show = (p == 0.3f && ShowThirty)
+                             || (p == 0.5f && ShowFifty)
+                             || (p == 0.7f && ShowSeventy);
+                    if (!show) continue;
+                    double price = b.High - range * p;
+                    float yF = (float)conv.GetChartY(price);
+                    using var l = new Pen(FibLineStyle.Color, FibLineStyle.Width)
+                    {
+                        DashStyle = ConvertLineStyleToDashStyle(FibLineStyle.LineStyle)
+                    };
+                    gfx.DrawLine(l, x1, yF, x2, yF);
+                    DrawFibLabel(gfx, $"{(int)(p * 100)}%", x1 + 2, yF);
+                }
+
+                // emoji
+                float ex = x1 + 5, ey = y1 - 20;
+                using var eb = new SolidBrush(b.Key == "Morning" ? Color.Yellow : Color.CornflowerBlue);
+                gfx.DrawString(b.Label, emojiFont, eb, ex, ey, stringFormat);
             }
         }
+
+        private DashStyle ConvertLineStyleToDashStyle(LineStyle ls) =>
+            ls switch
+            {
+                LineStyle.Solid => DashStyle.Solid,
+                LineStyle.Dash => DashStyle.Dash,
+                LineStyle.Dot => DashStyle.Dot,
+                LineStyle.DashDot => DashStyle.DashDot,
+                _ => DashStyle.Solid,
+            };
 
         private void DrawFibLabel(Graphics g, string text, float x, float y)
         {
-            var padding = 4;
-            var bgColor = Color.Gold;
-            var textColor = Color.Black;
+            const int pad = 4, rad = 6;
+            SizeF sz = g.MeasureString(text, fibLabelFont);
+            var rect = new RectangleF(x, y - sz.Height / 2, sz.Width + pad * 2, sz.Height);
+            using var path = new GraphicsPath();
+            path.AddArc(rect.Left, rect.Top, rad, rad, 180, 90);
+            path.AddArc(rect.Right - rad, rect.Top, rad, rad, 270, 90);
+            path.AddArc(rect.Right - rad, rect.Bottom - rad, rad, rad, 0, 90);
+            path.AddArc(rect.Left, rect.Bottom - rad, rad, rad, 90, 90);
+            path.CloseFigure();
+            using var bg = new SolidBrush(Color.Gold);
+            g.FillPath(bg, path);
+            using var p = new Pen(Color.Gold);
+            g.DrawPath(p, path);
+            g.DrawString(text, fibLabelFont, Brushes.Black, x + pad, y - sz.Height / 2);
+        }
 
-            SizeF textSize = g.MeasureString(text, fibLabelFont);
-            RectangleF rect = new RectangleF(x, y - textSize.Height / 2, textSize.Width + padding * 2, textSize.Height);
-
-            using (GraphicsPath path = new GraphicsPath())
-            {
-                int radius = 6;
-                path.AddArc(rect.Left, rect.Top, radius, radius, 180, 90);
-                path.AddArc(rect.Right - radius, rect.Top, radius, radius, 270, 90);
-                path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90);
-                path.AddArc(rect.Left, rect.Bottom - radius, radius, radius, 90, 90);
-                path.CloseFigure();
-
-                using (SolidBrush brush = new SolidBrush(bgColor))
-                    g.FillPath(brush, path);
-
-                using (Pen pen = new Pen(bgColor))
-                    g.DrawPath(pen, path);
-            }
-
-            g.DrawString(text, fibLabelFont, new SolidBrush(textColor), x + padding, y - textSize.Height / 2);
+        private class SessionBox
+        {
+            public DateTime Date;
+            public string Key;
+            public string Label;
+            public double High, Low;
+            public bool BrokeAbove, BrokeBelow;
+            public bool Mitigated;
+            public DateTime StartUtc, MitigationUtc;
         }
     }
 }
