@@ -305,17 +305,17 @@ namespace Time_Based_Range_Fibs_DTFX
                 float ex = x1 + 5;
                 float ey = y1 - 20;
 
-                // 1) draw the date (MM-dd) directly above the emoji
-                string dateText = b.Date.ToString("MM-dd");
+                // 1) draw the date (MM/dd) directly above the emoji
+                string dateText = b.Date.ToString("MM/dd");
                 using var dateBrush = new SolidBrush(Color.White);
                 SizeF dateSize = gfx.MeasureString(dateText, fibLabelFont);
 
                 // dateX = same center as emoji; dateY = just above emoji
                 float dateX = ex;
                 float dateY = ey
-                              - emojiFont.Height // move up by the emoji font height
-                              - (dateSize.Height * 0.5f) // center the date text above
-                              - 2; // a tiny gap
+                              - emojiFont.Height            // move up by the emoji font height
+                              - (dateSize.Height * 0.5f)    // center the date text above
+                              - 2;                          // a tiny gap
 
                 gfx.DrawString(
                     dateText,
