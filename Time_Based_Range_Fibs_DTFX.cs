@@ -56,6 +56,10 @@ namespace Time_Based_Range_Fibs_DTFX
             WithCheckBox = false
         };
 
+        //–– New configurable date style
+        private Font DateFont = new Font("Segoe UI", 8, FontStyle.Bold);
+        private Color DateFontColor = Color.White;
+
         //–– New limits
         [InputParameter("Max Unmitigated Boxes", 4)]
         private int MaxUnmitigatedBoxes = 5;
@@ -110,6 +114,16 @@ namespace Time_Based_Range_Fibs_DTFX
                     Format = DatePickerFormat.Time
                 });
 
+                // ... after your DateTime settings:
+                settings.Add(new SettingItemFont("Date Font", DateFont)
+                {
+                    SeparatorGroup = sep
+                });
+                settings.Add(new SettingItemColor("Date Font Color", DateFontColor)
+                {
+                    SeparatorGroup = sep
+                });
+
                 return settings;
             }
             set
@@ -119,6 +133,9 @@ namespace Time_Based_Range_Fibs_DTFX
                 if (value.TryGetValue("Morning Session End Time", out DateTime me)) MorningEnd = me.TimeOfDay;
                 if (value.TryGetValue("Afternoon Session Start Time", out DateTime as_)) AfternoonStart = as_.TimeOfDay;
                 if (value.TryGetValue("Afternoon Session End Time", out DateTime ae)) AfternoonEnd = ae.TimeOfDay;
+                if (value.TryGetValue("Date Font", out Font df)) DateFont = df;
+                if (value.TryGetValue("Date Font Color", out Color dc)) DateFontColor = dc;
+
                 Refresh();
             }
         }
@@ -304,38 +321,20 @@ namespace Time_Based_Range_Fibs_DTFX
                 // compute emoji position
                 float ex = x1 + 5;
                 float ey = y1 - 20;
-
-                // 1) draw the date (MM/dd) directly above the emoji
-                string dateText = b.Date.ToString("MM/dd");
-                using var dateBrush = new SolidBrush(Color.White);
-                SizeF dateSize = gfx.MeasureString(dateText, fibLabelFont);
-
-                // dateX = same center as emoji; dateY = just above emoji
-                float dateX = ex;
-                float dateY = ey
-                              - emojiFont.Height            // move up by the emoji font height
-                              - (dateSize.Height * 0.5f)    // center the date text above
-                              - 2;                          // a tiny gap
-
-                gfx.DrawString(
-                    dateText,
-                    fibLabelFont,
-                    dateBrush,
-                    dateX,
-                    dateY,
-                    stringFormat
-                );
-
-                // 2) draw the emoji itself
                 using var eb = new SolidBrush(b.Key == "Morning" ? Color.Yellow : Color.CornflowerBlue);
-                gfx.DrawString(
-                    b.Label,
-                    emojiFont,
-                    eb,
-                    ex,
-                    ey,
-                    stringFormat
-                );
+
+                // 1) draw the emoji
+                gfx.DrawString(b.Label, emojiFont, eb, ex, ey, stringFormat);
+
+                // 2) then draw the date (MM/dd) just below it
+                string dateText = b.Date.ToString("MM/dd");
+                using var dfBrush = new SolidBrush(DateFontColor);
+                SizeF dtSz = gfx.MeasureString(dateText, DateFont);
+
+                float dateX = ex;
+                float dateY = ey + emojiFont.Height + 2; // 2px gap
+
+                gfx.DrawString(dateText, DateFont, dfBrush, dateX, dateY, stringFormat);
             }
         }
 
