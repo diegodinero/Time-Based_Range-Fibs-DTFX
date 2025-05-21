@@ -14,7 +14,8 @@ namespace Time_Based_Range_Fibs_DTFX
     public class Time_Based_Range_Fibs_DTFX : Indicator
     {
         //–– Fonts & formatting
-        private Font _emojiFont, _fibLabelFont, _dateFont;
+        private Font _emojiFont, _fibLabelFont, _dateFont, _starFont;
+
         private StringFormat _stringFormat;
         private SolidBrush _dateBrush;
 
@@ -25,7 +26,9 @@ namespace Time_Based_Range_Fibs_DTFX
 
         //–– Inputs
         [InputParameter("History Lookback (days)", 1)]
-        public int HistoryLookbackDays { get; set; } = 45;
+        public int HistoryLookbackDays { get; set; } = 4;
+        // right below your other inputs:
+        
 
         [InputParameter("Morning Session Start Time", 2)] private TimeSpan _morningStart = new(9, 0, 0);
         [InputParameter("Morning Session End Time", 3)] private TimeSpan _morningEnd = new(10, 0, 0);
@@ -57,6 +60,14 @@ namespace Time_Based_Range_Fibs_DTFX
 
         [InputParameter("Max Unmitigated Boxes", 16)] public int MaxUnmitigatedBoxes { get; set; } = 5;
         [InputParameter("Max Mitigated Boxes", 17)] public int MaxMitigatedBoxes { get; set; } = 5;
+        // ————————————————————————————————————————————————
+        [InputParameter("Use Star Marker (otherwise fill)", 18)]
+        public bool UseStarMarker { get; set; } = false;
+
+        // keep the emoji constant
+        public const string Star2 = "🌟";
+
+        // ————————————————————————————————————————————————
 
         //–– Shared fib percentages
         private static readonly double[] _fibPcts = { 0.3, 0.5, 0.7 };
@@ -71,6 +82,7 @@ namespace Time_Based_Range_Fibs_DTFX
         protected override void OnInit()
         {
             _emojiFont = new Font("Segoe UI Emoji", 12, FontStyle.Bold);
+            _starFont = new Font("Segoe UI Emoji", 8, FontStyle.Bold);  // <-- new 8-pt star font
             _fibLabelFont = new Font("Segoe UI", 8, FontStyle.Bold);
             _dateFont = new Font("Segoe UI", 8, FontStyle.Bold);
             _stringFormat = new StringFormat
@@ -82,6 +94,7 @@ namespace Time_Based_Range_Fibs_DTFX
 
             ReloadHistory();
         }
+
 
         public override IList<SettingItem> Settings
         {
@@ -293,41 +306,60 @@ namespace Time_Based_Range_Fibs_DTFX
                 }
             }
 
-            // INSIDE-BAR shading
+            // INSIDE-BAR: either Fill or Star, per InsideBarStyle
             for (int j = 1; j < bars.Length - 1; j++)
             {
                 var cur = bars[j];
                 var prev = bars[j - 1];
                 var next = bars[j + 1];
 
-                if (!sb.BrokeAbove && !sb.BrokeBelow)
-                    break;  // no breakout
-
-                if (cur.Utc <= breakoutUtc)
-                    continue;  // before chart‐bar breakout
-
-                if (sb.Mitigated && cur.Utc >= sb.MitigationUtc)
-                    break;  // after mitigation
-
-                // only when back inside original box
-                if (cur.High >= sb.High || cur.Low <= sb.Low)
+                // only after breakout & before mitigation, and strictly inside original box
+                if ((!sb.BrokeAbove && !sb.BrokeBelow)
+                    || cur.Utc <= sb.BreakUtc
+                    || (sb.Mitigated && cur.Utc >= sb.MitigationUtc)
+                    || cur.High >= sb.High
+                    || cur.Low <= sb.Low)
                     continue;
 
-                // strictly inside previous bar
+                // strictly inside the previous bar?
                 if (cur.High < prev.High && cur.Low > prev.Low)
                 {
-                    float barPx = (next.X - prev.X) * 0.5f;
-                    float shiftPx = barPx * 0.40f;
-                    float bx1 = cur.X - barPx + shiftPx;
-                    float bx2 = cur.X + barPx + shiftPx;
-                    float yHigh = (float)conv.GetChartY(cur.High);
-                    float yLow = (float)conv.GetChartY(cur.Low);
-
+                    // pick color based on bull/bear
                     var ibCol = cur.Close > cur.Open ? InsideBullColor : InsideBearColor;
-                    using var b = new SolidBrush(Color.FromArgb(100, ibCol));
-                    gfx.FillRectangle(b, bx1, yHigh, bx2 - bx1, yLow - yHigh);
+                    using var brush = new SolidBrush(Color.FromArgb(100, ibCol));
+
+                    if (UseStarMarker)
+                    {
+                        // STAR mode
+                        // compute the pixel‐width of half a bar & your existing shift
+                        float barPx = (next.X - prev.X) * 0.7f;
+                        float shiftPx = barPx * 0.40f;
+
+                        // shift the star right by that same amount
+                        float xStar = cur.X + shiftPx;
+                        float yStar = (float)conv.GetChartY(cur.High)
+                                      - _starFont.Height
+                                      - 2f;
+
+                        // draw with the smaller star font
+                        gfx.DrawString(Star2, _starFont, brush, xStar, yStar, _stringFormat);
+
+                    }
+                    else
+                    {
+                        // FILL mode
+                        float barPx = (next.X - prev.X) * 0.5f;
+                        float shiftPx = barPx * 0.40f;
+                        float bx1 = cur.X - barPx + shiftPx;
+                        float bx2 = cur.X + barPx + shiftPx;
+                        float yHigh = (float)conv.GetChartY(cur.High);
+                        float yLow = (float)conv.GetChartY(cur.Low);
+                        gfx.FillRectangle(brush, bx1, yHigh, bx2 - bx1, yLow - yHigh);
+                    }
+
                 }
             }
+
 
             // Fibonacci levels
             double range = sb.High - sb.Low;
