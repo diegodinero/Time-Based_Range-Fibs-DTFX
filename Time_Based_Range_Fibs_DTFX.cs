@@ -107,13 +107,6 @@ namespace Time_Based_Range_Fibs_DTFX
                 var sep = s.FirstOrDefault()?.SeparatorGroup;
                 var today = TimeZoneInfo.ConvertTime(DateTime.UtcNow, _estZone).Date;
 
-              
-
-                s.Insert(0, MakePicker("Afternoon Session End Time", today.Add(_afternoonEnd), sep));
-                s.Insert(0, MakePicker("Afternoon Session Start Time", today.Add(_afternoonStart), sep));
-                s.Insert(0, MakePicker("Morning Session End Time", today.Add(_morningEnd), sep));
-                s.Insert(0, MakePicker("Morning Session Start Time", today.Add(_morningStart), sep));
-
                 return s;
             }
             set
@@ -122,17 +115,7 @@ namespace Time_Based_Range_Fibs_DTFX
                 if (value.TryGetValue("History Lookback (days)", out int hl))
                     HistoryLookbackDays = Math.Clamp(hl, 1, 365);
 
-                foreach (var dt in value.OfType<SettingItemDateTime>())
-                {
-                    var tod = TimeZoneInfo.ConvertTime((DateTime)dt.Value, _estZone).TimeOfDay;
-                    switch (dt.Name)
-                    {
-                        case "Morning Session Start Time": _morningStart = tod; break;
-                        case "Morning Session End Time": _morningEnd = tod; break;
-                        case "Afternoon Session Start Time": _afternoonStart = tod; break;
-                        case "Afternoon Session End Time": _afternoonEnd = tod; break;
-                    }
-                }
+               
 
                 ReloadHistory();
                 Refresh();
