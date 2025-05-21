@@ -14,7 +14,7 @@ namespace Time_Based_Range_Fibs_DTFX
     public class Time_Based_Range_Fibs_DTFX : Indicator
     {
         //–– Fonts & formatting
-        private Font _emojiFont, _fibLabelFont, _dateFont, _starFont;
+        private Font _emojiFont, _fibLabelFont, _dateFont, _starFont, _asteriskFont;
 
         private StringFormat _stringFormat;
         private SolidBrush _dateBrush;
@@ -54,18 +54,19 @@ namespace Time_Based_Range_Fibs_DTFX
         };
 
         [InputParameter("Bullish Inside Bar Color", 14)]
-        public Color InsideBullColor { get; set; } = Color.LimeGreen;
+        public Color InsideBullColor { get; set; } = Color.DodgerBlue;
         [InputParameter("Bearish Inside Bar Color", 15)]
-        public Color InsideBearColor { get; set; } = Color.Red;
+        public Color InsideBearColor { get; set; } = Color.Orange;
 
         [InputParameter("Max Unmitigated Boxes", 16)] public int MaxUnmitigatedBoxes { get; set; } = 5;
         [InputParameter("Max Mitigated Boxes", 17)] public int MaxMitigatedBoxes { get; set; } = 5;
         // ————————————————————————————————————————————————
         [InputParameter("Use Star Marker (otherwise fill)", 18)]
-        public bool UseStarMarker { get; set; } = false;
+        public bool UseStarMarker { get; set; } = true;
 
         // keep the emoji constant
-        public const string Star2 = "🌟";
+        public const string Star2 = "✱";
+
 
         // ————————————————————————————————————————————————
 
@@ -81,6 +82,8 @@ namespace Time_Based_Range_Fibs_DTFX
 
         protected override void OnInit()
         {
+
+            _asteriskFont = new Font("Segoe UI Emoji", 12, FontStyle.Bold);
             _emojiFont = new Font("Segoe UI Emoji", 12, FontStyle.Bold);
             _starFont = new Font("Segoe UI Emoji", 8, FontStyle.Bold);  // <-- new 8-pt star font
             _fibLabelFont = new Font("Segoe UI", 8, FontStyle.Bold);
@@ -330,19 +333,32 @@ namespace Time_Based_Range_Fibs_DTFX
 
                     if (UseStarMarker)
                     {
-                        // STAR mode
-                        // compute the pixel‐width of half a bar & your existing shift
-                        float barPx = (next.X - prev.X) * 0.7f;
+                        //// STAR mode
+                        //// compute the pixel‐width of half a bar & your existing shift
+                        //float barPx = (next.X - prev.X) * 0.7f;
+                        //float shiftPx = barPx * 0.40f;
+
+                        //// shift the star right by that same amount
+                        //float xStar = cur.X + shiftPx;
+                        //float yStar = (float)conv.GetChartY(cur.High)
+                        //              - _starFont.Height
+                        //              - 2f;
+
+                        //// draw with the smaller star font
+                        //gfx.DrawString(Star2, _starFont, brush, xStar, yStar, _stringFormat);
+
+                        // compute the same horizontal shift if you want it aligned
+                        float barPx = (next.X - prev.X) * 0.5f;
                         float shiftPx = barPx * 0.40f;
 
-                        // shift the star right by that same amount
-                        float xStar = cur.X + shiftPx;
-                        float yStar = (float)conv.GetChartY(cur.High)
-                                      - _starFont.Height
-                                      - 2f;
+                        float xMark = cur.X + shiftPx;
+                        float yMark = (float)conv.GetChartY(cur.High)
+                                       - _asteriskFont.Height
+                                       - 2f;
 
-                        // draw with the smaller star font
-                        gfx.DrawString(Star2, _starFont, brush, xStar, yStar, _stringFormat);
+                        // draw the colored asterisk instead of the emoji
+                        gfx.DrawString(Star2, _asteriskFont, brush, xMark, yMark, _stringFormat);
+
 
                     }
                     else
