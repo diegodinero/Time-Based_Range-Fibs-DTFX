@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices;
 using TradingPlatform.BusinessLayer;
 using TradingPlatform.BusinessLayer.Chart;    // for IChartWindowCoordinatesConverter & SettingItemDateTime
 using TradingPlatform.BusinessLayer.Utils;
@@ -488,7 +486,7 @@ namespace Time_Based_Range_Fibs_DTFX
 
         private class ChartBar
         {
-            public DateTime Utc, Est;
+            public DateTime Utc;
             public float X;
             public double High, Low, Open, Close;
         }
