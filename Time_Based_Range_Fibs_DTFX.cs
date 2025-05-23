@@ -178,21 +178,41 @@ namespace Time_Based_Range_Fibs_DTFX
             };
 
             // 3) Build all session boxes
-            var sessions = defs
-                .Where(d => d.IsEnabled())
-                .SelectMany(d => _hourBars
-                    .Where(h => h.Est.TimeOfDay >= d.Start && h.Est.TimeOfDay < d.End)
-                    .GroupBy(h => h.Est.Date)
-                    .Select(g => MakeSessionBox(g.Key, g.ToList(), d))
-                )
-                .ToList();
+            var sessions = new List<SessionBox>();
+            foreach (var d in defs)
+            {
+                if (!d.IsEnabled())
+                    continue;
 
-            // 4) Apply limits & sort
+                // bucket hourBars by date
+                var buckets = new Dictionary<DateTime, List<HourBar>>();
+                foreach (var h in _hourBars)
+                {
+                    var tod = h.Est.TimeOfDay;
+                    if (tod < d.Start || tod >= d.End)
+                        continue;
+
+                    var date = h.Est.Date;
+                    if (!buckets.TryGetValue(date, out var list))
+                    {
+                        list = new List<HourBar>();
+                        buckets[date] = list;
+                    }
+                    list.Add(h);
+                }
+
+                // for each date group, build a SessionBox
+                foreach (var kv in buckets)
+                {
+                    sessions.Add(MakeSessionBox(kv.Key, kv.Value, d));
+                }
+            }
+
+            // 4) Apply limits & sort (you can keep the LINQ here, it's cheap)
             var unmit = sessions
                 .Where(b => !b.Mitigated)
                 .OrderByDescending(b => b.Date)
                 .Take(MaxUnmitigatedBoxes);
-
             var mit = sessions
                 .Where(b => b.Mitigated)
                 .OrderByDescending(b => b.Date)
@@ -242,21 +262,42 @@ namespace Time_Based_Range_Fibs_DTFX
 
         private SessionBox MakeSessionBox(DateTime date, List<HourBar> grp, SessionDef d)
         {
-            double high = grp.Max(x => x.High), low = grp.Min(x => x.Low);
+            // find high & low
+            double high = double.MinValue, low = double.MaxValue;
+            foreach (var h in grp)
+            {
+                if (h.High > high) high = h.High;
+                if (h.Low < low) low = h.Low;
+            }
 
-            // Breakout detection (hourly)
-            var brk = _hourBars.FirstOrDefault(h =>
-                h.Est > date.Add(d.End) && (h.Close > high || h.Close < low)
-            );
-            bool up = brk?.Close > high;
-            bool down = brk?.Close < low;
+            // hourly breakout detection
+            HourBar brk = null;
+            foreach (var h in _hourBars)
+            {
+                if (h.Est > date.Add(d.End) && (h.Close > high || h.Close < low))
+                {
+                    brk = h;
+                    break;
+                }
+            }
+            bool up = brk != null && brk.Close > high;
+            bool down = brk != null && brk.Close < low;
             var breakUtc = brk?.Utc ?? DateTime.MinValue;
 
-            // Mitigation detection
-            var mitBar = (up || down)
-                ? _hourBars.SkipWhile(h => h.Utc <= breakUtc)
-                           .FirstOrDefault(h => up ? h.Close < low : h.Close > high)
-                : null;
+            // mitigation detection
+            HourBar mitBar = null;
+            if (brk != null)
+            {
+                foreach (var h in _hourBars)
+                {
+                    if (h.Utc <= breakUtc) continue;
+                    if (up && h.Close < low || down && h.Close > high)
+                    {
+                        mitBar = h;
+                        break;
+                    }
+                }
+            }
             bool mit = mitBar != null;
             var mitUtc = mitBar?.Utc ?? DateTime.MaxValue;
 
