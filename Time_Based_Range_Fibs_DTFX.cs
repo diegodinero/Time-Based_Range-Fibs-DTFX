@@ -79,6 +79,14 @@ namespace Time_Based_Range_Fibs_DTFX
         //–– Shared fib percentages
         private static readonly double[] _fibPcts = { 0.3, 0.5, 0.7 };
 
+        private readonly List<InsideBarInfo> _insideBars = new();
+
+        private struct InsideBarInfo
+        {
+            public DateTime CurTime, NextTime;
+            public double Open, High, Low, Close;
+        }
+
         public Time_Based_Range_Fibs_DTFX()
         {
             Name = "Time_Based_Range_Fibs_DTFX3";
@@ -147,17 +155,18 @@ namespace Time_Based_Range_Fibs_DTFX
 
         public override void OnPaintChart(PaintChartEventArgs args)
         {
-            base.OnPaintChart(args);
-            if (CurrentChart == null) return;
-
+            //–– standard preliminaries ––
             var gfx = args.Graphics;
             var conv = CurrentChart.MainWindow.CoordinatesConverter;
             var rightUtc = conv.GetTime(CurrentChart.MainWindow.ClientRectangle.Right);
 
-            // build minute‐bar array for inside-bar logic
-            var bars = _minuteHistory
-                .Cast<HistoryItemBar>()
-                .Select(hb => new ChartBar
+            //–– build ChartBar[] once per paint (you could push this to OnUpdate and reuse) ––
+            var barsSource = _minuteHistory.Cast<HistoryItemBar>().ToArray();
+            var bars = new ChartBar[barsSource.Length];
+            for (int i = 0; i < barsSource.Length; i++)
+            {
+                var hb = barsSource[i];
+                bars[i] = new ChartBar
                 {
                     Utc = hb.TimeLeft,
                     X = (float)conv.GetChartX(hb.TimeLeft),
@@ -165,8 +174,8 @@ namespace Time_Based_Range_Fibs_DTFX
                     Low = hb.Low,
                     Open = hb.Open,
                     Close = hb.Close
-                })
-                .ToArray();
+                };
+            }
 
             // update today’s sessions in _allBoxes
             var today = TimeZoneInfo.ConvertTime(DateTime.UtcNow, _estZone).Date;
@@ -189,25 +198,64 @@ namespace Time_Based_Range_Fibs_DTFX
                 }
             }
 
-            // choose which boxes to draw
-            var unmit = _allBoxes
-                .Where(b => !b.Mitigated)
-                .OrderByDescending(b => b.Date)
-                .Take(MaxUnmitigatedBoxes);
+            int maxUn = Math.Min(MaxUnmitigatedBoxes, _allBoxes.Count);
+            int maxMi = Math.Min(MaxMitigatedBoxes, _allBoxes.Count);
+            int capacity = maxUn + maxMi;
+            var buffer = new SessionBox[capacity];
+            int cnt = 0;
 
-            var mit = _allBoxes
-                .Where(b => b.Mitigated)
-                .OrderByDescending(b => b.Date)
-                .Take(MaxMitigatedBoxes);
+            // 1) take up to maxUn unmitigated, in original order
+            for (int i = 0; i < _allBoxes.Count && cnt < maxUn; i++)
+            {
+                var b = _allBoxes[i];
+                if (!b.Mitigated)
+                    buffer[cnt++] = b;
+            }
 
-            var toDraw = unmit
-                .Concat(mit)
-                .OrderBy(b => b.Date)
-                .ThenBy(b => b.Key);
+            // 2) then up to maxMi mitigated
+            for (int i = 0; i < _allBoxes.Count && cnt < capacity; i++)
+            {
+                var b = _allBoxes[i];
+                if (b.Mitigated)
+                    buffer[cnt++] = b;
+            }
 
+            //–– simple insertion‐sort buffer[0..cnt) by Date, then Key ––
+            for (int i = 1; i < cnt; i++)
+            {
+                var tmp = buffer[i];
+                int j = i - 1;
+                while (j >= 0 &&
+                      (buffer[j].Date > tmp.Date
+                       || (buffer[j].Date == tmp.Date
+                           && string.Compare(buffer[j].Key, tmp.Key, StringComparison.Ordinal) > 0)))
+                {
+                    buffer[j + 1] = buffer[j];
+                    j--;
+                }
+                buffer[j + 1] = tmp;
+            }
+
+            //–– now DRAW from buffer ––
             var defs = GetDefs();
-            foreach (var sb in toDraw)
-                DrawSession(sb, defs, gfx, conv, rightUtc, bars);
+            for (int i = 0; i < cnt; i++)
+                DrawSession(buffer[i], defs, gfx, conv, rightUtc, bars);
+
+            //–– inside‐bars drawing (unchanged) ––
+            foreach (var ib in _insideBars)
+            {
+                float half = ((float)conv.GetChartX(ib.NextTime) - (float)conv.GetChartX(ib.CurTime)) * 0.5f;
+                float shift = half * 0.4f;
+                float cx = (float)conv.GetChartX(ib.CurTime);
+                float bx1 = cx - half + shift;
+                float bx2 = cx + half + shift;
+                float yH = (float)conv.GetChartY(ib.High);
+                float yL = (float)conv.GetChartY(ib.Low);
+
+                var col = ib.Close > ib.Open ? InsideBullColor : InsideBearColor;
+                using var brush = new SolidBrush(Color.FromArgb(100, col));
+                gfx.FillRectangle(brush, bx1, yH, bx2 - bx1, yL - yH);
+            }
         }
 
         private void ReloadHistory()
