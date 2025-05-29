@@ -39,10 +39,8 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Afternoon Session End Time", 5)]
         private TimeSpan _afternoonEnd = new(16, 0, 0);
 
-        [InputParameter("Show Morning Box", 6)]
-        public bool ShowMorningBox { get; set; } = true;
-        [InputParameter("Show Afternoon Box", 7)]
-        public bool ShowAfternoonBox { get; set; } = true;
+        [InputParameter("Show Morning Box", 6)] public bool ShowMorningBox { get; set; } = true;
+        [InputParameter("Show Afternoon Box", 7)] public bool ShowAfternoonBox { get; set; } = true;
 
         [InputParameter("Show 30% Retracement", 8)] public bool ShowThirty { get; set; } = true;
         [InputParameter("Show 50% Retracement", 9)] public bool ShowFifty { get; set; } = true;
@@ -68,6 +66,15 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Use Star Marker (otherwise fill)", 18)]
         public bool UseStarMarker { get; set; } = true;
         public const string Star2 = "✱";
+
+        [InputParameter("Show Fib Levels", 19)]
+        public bool ShowFibs { get; set; } = true;
+
+        [InputParameter("Morning Box Label", 20)]
+        public string MorningLabel { get; set; } = "☀️";
+
+        [InputParameter("Afternoon Box Label", 21)]
+        public string AfternoonLabel { get; set; } = "🏧";
 
         //–– Shared fib percentages
         private static readonly double[] _fibPcts = { 0.3, 0.5, 0.7 };
@@ -165,17 +172,14 @@ namespace Time_Based_Range_Fibs_DTFX
             var today = TimeZoneInfo.ConvertTime(DateTime.UtcNow, _estZone).Date;
             foreach (var sb in _allBoxes.Where(b => b.Date == today && !b.Mitigated))
             {
-                // find matching def
-                var def = GetDefs().First(d => d.Key == sb.Key);
-
-                // pick minute bars inside today’s window
                 var live = _minuteHistory
                     .OfType<HistoryItemBar>()
-                    .Where(hb => {
+                    .Where(hb =>
+                    {
                         var est = TimeZoneInfo.ConvertTime(hb.TimeLeft, TimeZoneInfo.Utc, _estZone);
                         return est.Date == today
-                            && est.TimeOfDay >= def.Start
-                            && est.TimeOfDay < def.End;
+                            && est.TimeOfDay >= GetDefs().First(d => d.Key == sb.Key).Start
+                            && est.TimeOfDay < GetDefs().First(d => d.Key == sb.Key).End;
                     });
 
                 if (live.Any())
@@ -201,7 +205,6 @@ namespace Time_Based_Range_Fibs_DTFX
                 .OrderBy(b => b.Date)
                 .ThenBy(b => b.Key);
 
-            // draw each
             var defs = GetDefs();
             foreach (var sb in toDraw)
                 DrawSession(sb, defs, gfx, conv, rightUtc, bars);
@@ -244,7 +247,6 @@ namespace Time_Based_Range_Fibs_DTFX
             {
                 if (!d.IsEnabled()) continue;
 
-                // bucket hourBars by date within session window
                 var buckets = new Dictionary<DateTime, List<HourBar>>();
                 foreach (var h in _hourBars)
                 {
@@ -256,7 +258,6 @@ namespace Time_Based_Range_Fibs_DTFX
                     list.Add(h);
                 }
 
-                // make a box per date
                 foreach (var kv in buckets)
                     _allBoxes.Add(MakeSessionBox(kv.Key, kv.Value, d));
             }
@@ -264,8 +265,8 @@ namespace Time_Based_Range_Fibs_DTFX
 
         private SessionDef[] GetDefs() => new[]
         {
-            new SessionDef("Morning",   "☀️", _morningStart,   _morningEnd,   () => ShowMorningBox,   Color.Yellow),
-            new SessionDef("Afternoon", "🏧", _afternoonStart, _afternoonEnd, () => ShowAfternoonBox, Color.CornflowerBlue)
+            new SessionDef("Morning",   MorningLabel,   _morningStart,   _morningEnd,   () => ShowMorningBox,   Color.Yellow),
+            new SessionDef("Afternoon", AfternoonLabel, _afternoonStart, _afternoonEnd, () => ShowAfternoonBox, Color.CornflowerBlue)
         };
 
         private SessionBox MakeSessionBox(DateTime date, List<HourBar> grp, SessionDef d)
@@ -277,13 +278,13 @@ namespace Time_Based_Range_Fibs_DTFX
                 if (h.Low < low) low = h.Low;
             }
 
-            // breakout & mitigation
             HourBar brkBar = null, mitBar = null;
             foreach (var h in _hourBars)
             {
                 if (h.Est > date.Add(d.End) && (h.Close > high || h.Close < low))
                 { brkBar = h; break; }
             }
+
             bool up = brkBar != null && brkBar.Close > high;
             bool down = brkBar != null && brkBar.Close < low;
             var breakUtc = brkBar?.Utc ?? DateTime.MinValue;
@@ -293,10 +294,12 @@ namespace Time_Based_Range_Fibs_DTFX
                 foreach (var h in _hourBars)
                 {
                     if (h.Utc <= breakUtc) continue;
-                    if (up && h.Close < low || down && h.Close > high)
+                    if ((up && h.Close < low) ||
+                        (down && h.Close > high))
                     { mitBar = h; break; }
                 }
             }
+
             bool mit = mitBar != null;
             var mitUtc = mitBar?.Utc ?? DateTime.MaxValue;
 
@@ -345,9 +348,8 @@ namespace Time_Based_Range_Fibs_DTFX
 
             // detect true breakout on minute bars
             DateTime breakoutUtc = sb.BreakUtc;
-            for (int k = 0; k < bars.Length; k++)
+            foreach (var c in bars)
             {
-                var c = bars[k];
                 if (c.Utc > sb.StartUtc && (c.Close > sb.High || c.Close < sb.Low))
                 {
                     breakoutUtc = c.Utc;
@@ -395,33 +397,36 @@ namespace Time_Based_Range_Fibs_DTFX
             }
 
             // Fibonacci levels
-            double range = sb.High - sb.Low;
-            foreach (var pct in _fibPcts)
+            if (ShowFibs)
             {
-                bool show = (pct == 0.3 && ShowThirty)
-                         || (pct == 0.5 && ShowFifty)
-                         || (pct == 0.7 && ShowSeventy);
-                if (!show) continue;
-
-                float yF = (float)conv.GetChartY(sb.High - range * pct);
-                using var fpen = new Pen(FibLineStyle.Color, FibLineStyle.Width)
+                double range = sb.High - sb.Low;
+                foreach (var pct in _fibPcts)
                 {
-                    DashStyle = FibLineStyle.LineStyle switch
+                    bool show = (pct == 0.3 && ShowThirty)
+                             || (pct == 0.5 && ShowFifty)
+                             || (pct == 0.7 && ShowSeventy);
+                    if (!show) continue;
+
+                    float yF = (float)conv.GetChartY(sb.High - range * pct);
+                    using var fpen = new Pen(FibLineStyle.Color, FibLineStyle.Width)
                     {
-                        LineStyle.Solid => DashStyle.Solid,
-                        LineStyle.Dash => DashStyle.Dash,
-                        LineStyle.Dot => DashStyle.Dot,
-                        LineStyle.DashDot => DashStyle.DashDot,
-                        _ => DashStyle.Solid
-                    }
-                };
-                gfx.DrawLine(fpen, x1, yF, x2, yF);
-                DrawFibLabel(gfx, $"{(int)(pct * 100)}%", x1 + 2, yF);
+                        DashStyle = FibLineStyle.LineStyle switch
+                        {
+                            LineStyle.Solid => DashStyle.Solid,
+                            LineStyle.Dash => DashStyle.Dash,
+                            LineStyle.Dot => DashStyle.Dot,
+                            LineStyle.DashDot => DashStyle.DashDot,
+                            _ => DashStyle.Solid
+                        }
+                    };
+                    gfx.DrawLine(fpen, x1, yF, x2, yF);
+                    DrawFibLabel(gfx, $"{(int)(pct * 100)}%", x1 + 2, yF);
+                }
             }
 
-            // Emoji & date
+            // Emoji / Number & date
             using (var ebr = new SolidBrush(def.EmojiColor))
-                gfx.DrawString(sb.Label, _emojiFont, ebr, x1 + 5, y1 - 20, _stringFormat);
+                gfx.DrawString(def.Label, _emojiFont, ebr, x1 + 5, y1 - 20, _stringFormat);
             gfx.DrawString(
                 sb.Date.ToString("MM/dd"),
                 _dateFont,
