@@ -71,10 +71,10 @@ namespace Time_Based_Range_Fibs_DTFX
         public bool ShowFibs { get; set; } = true;
 
         [InputParameter("Morning Box Label", 20)]
-        public string MorningLabel { get; set; } = "☀️";
+        public string MorningLabel { get; set; } = "9";
 
         [InputParameter("Afternoon Box Label", 21)]
-        public string AfternoonLabel { get; set; } = "🏧";
+        public string AfternoonLabel { get; set; } = "3";
 
         //–– Shared fib percentages
         private static readonly double[] _fibPcts = { 0.3, 0.5, 0.7 };
