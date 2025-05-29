@@ -91,7 +91,7 @@ namespace Time_Based_Range_Fibs_DTFX
             base.OnInit();
 
             // init fonts & brushes
-            _asteriskFont = new Font("Segoe UI Emoji", 12, FontStyle.Bold);
+            _asteriskFont = new Font("Segoe UI Emoji", 8, FontStyle.Bold);
             _emojiFont = new Font("Segoe UI Emoji", 12, FontStyle.Bold);
             _starFont = new Font("Segoe UI Emoji", 8, FontStyle.Bold);
             _fibLabelFont = new Font("Segoe UI", 8, FontStyle.Bold);
