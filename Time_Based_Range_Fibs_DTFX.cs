@@ -117,7 +117,7 @@ namespace Time_Based_Range_Fibs_DTFX
 
         private void Chart_SettingsChanged(object sender, ChartEventArgs e)
         {
-            ReloadHistory();
+            //ReloadHistory();
             BuildSessionBoxes();
             Refresh();
         }
@@ -125,7 +125,7 @@ namespace Time_Based_Range_Fibs_DTFX
         protected override void OnSettingsUpdated()
         {
             base.OnSettingsUpdated();
-            ReloadHistory();
+            //ReloadHistory();
             BuildSessionBoxes();
             Refresh();
         }
@@ -139,7 +139,7 @@ namespace Time_Based_Range_Fibs_DTFX
                 if (value.TryGetValue("History Lookback (days)", out int hl))
                     HistoryLookbackDays = Math.Clamp(hl, 1, 365);
 
-                ReloadHistory();
+                //ReloadHistory();
                 BuildSessionBoxes();
                 Refresh();
             }
@@ -218,7 +218,7 @@ namespace Time_Based_Range_Fibs_DTFX
                 DateTime.UtcNow.AddDays(-HistoryLookbackDays)
             );
             _minuteHistory = Symbol.GetHistory(
-                Period.MIN1,
+                this.HistoricalData.Aggregation.GetPeriod,
                 Symbol.HistoryType,
                 DateTime.UtcNow.AddDays(-HistoryLookbackDays)
             );
