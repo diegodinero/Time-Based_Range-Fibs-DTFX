@@ -61,7 +61,7 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Bearish Inside Bar Color", 15)] public Color InsideBearColor { get; set; } = Color.Orange;
 
         [InputParameter("Max Unmitigated Boxes", 16)] public int MaxUnmitigatedBoxes { get; set; } = 5;
-        [InputParameter("Max Mitigated Boxes", 17)] public int MaxMitigatedBoxes { get; set; } = 5;
+        [InputParameter("Max Mitigated Boxes", 17)] public int MaxMitigatedBoxes { get; set; } = 0;
 
         [InputParameter("Use Star Marker (otherwise fill)", 18)]
         public bool UseStarMarker { get; set; } = true;
