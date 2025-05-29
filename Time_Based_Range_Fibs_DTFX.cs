@@ -102,25 +102,14 @@ namespace Time_Based_Range_Fibs_DTFX
             // fetch histories + build all boxes
             ReloadHistory();
             BuildSessionBoxes();
-
-            // re-build on user-changes
-            if (CurrentChart != null)
-                CurrentChart.SettingsChanged += Chart_SettingsChanged;
         }
 
         protected override void OnClear()
         {
-            if (CurrentChart != null)
-                CurrentChart.SettingsChanged -= Chart_SettingsChanged;
+            
             base.OnClear();
         }
 
-        private void Chart_SettingsChanged(object sender, ChartEventArgs e)
-        {
-            ReloadHistory();
-            BuildSessionBoxes();
-            Refresh();
-        }
 
         protected override void OnSettingsUpdated()
         {
@@ -129,6 +118,7 @@ namespace Time_Based_Range_Fibs_DTFX
             BuildSessionBoxes();
             Refresh();
         }
+
 
         public override IList<SettingItem> Settings
         {
@@ -218,7 +208,7 @@ namespace Time_Based_Range_Fibs_DTFX
                 DateTime.UtcNow.AddDays(-HistoryLookbackDays)
             );
             _minuteHistory = Symbol.GetHistory(
-                Period.MIN1,
+                this.HistoricalData.Aggregation.GetPeriod,
                 Symbol.HistoryType,
                 DateTime.UtcNow.AddDays(-HistoryLookbackDays)
             );
