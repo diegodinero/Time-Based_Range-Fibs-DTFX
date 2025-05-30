@@ -100,8 +100,8 @@ namespace Time_Based_Range_Fibs_DTFX
                 LineAlignment = StringAlignment.Center
             };
 
-            ReloadHistory();
-            BuildHourBars();
+            ReloadHistory();     // loads raw UTC into _hoursHistory
+            BuildHourBars();     // converts TimeLeft→UTC & EST once
             BuildSessionBoxes();
         }
 
@@ -116,6 +116,7 @@ namespace Time_Based_Range_Fibs_DTFX
 
         private void ReloadHistory()
         {
+            // fetch only UTC timestamps here
             _hoursHistory = Symbol.GetHistory(
                 Period.HOUR1,
                 Symbol.HistoryType,
@@ -127,7 +128,10 @@ namespace Time_Based_Range_Fibs_DTFX
         {
             _hourBars.Clear();
             foreach (HistoryItem item in _hoursHistory)
+            {
                 if (item is HistoryItemBar hb)
+                {
+                    // convert once: store both Utc and EstTime
                     _hourBars.Add(new HourBar
                     {
                         Utc = hb.TimeLeft,
@@ -136,29 +140,32 @@ namespace Time_Based_Range_Fibs_DTFX
                         Low = hb.Low,
                         Close = hb.Close
                     });
-            // already sorted by Utc in the loop order, but ensure:
+                }
+            }
             _hourBars.Sort((a, b) => a.Utc.CompareTo(b.Utc));
         }
 
         private void BuildSessionBoxes()
         {
             _allBoxes.Clear();
-            // group by date
+
+            // bucket hours by EST date (no further conversions)
             var buckets = new Dictionary<DateTime, List<HourBar>>();
             foreach (var h in _hourBars)
             {
-                DateTime date = h.EstTime.Date;
+                var date = h.EstTime.Date;
                 if (!buckets.TryGetValue(date, out var list))
                     buckets[date] = list = new List<HourBar>();
                 list.Add(h);
             }
-            // get dates descending
+
+            // process most recent N days
             var dates = new List<DateTime>(buckets.Keys);
-            dates.Sort((a, b) => b.CompareTo(a));
-            int count = 0;
+            dates.Sort((a, b) => b.CompareTo(a));  // descending
+            int used = 0;
             foreach (var date in dates)
             {
-                if (count++ >= HistoryLookbackDays) break;
+                if (used++ >= HistoryLookbackDays) break;
                 var list = buckets[date];
                 if (ShowMorningBox)
                     TryAddSession(list, date, MorningStart, MorningEnd, MorningDefaultColor, MorningLabel);
@@ -177,10 +184,11 @@ namespace Time_Based_Range_Fibs_DTFX
         )
         {
             double high = double.MinValue, low = double.MaxValue;
+            // find session high/low by ESTTime
             foreach (var h in bars)
             {
-                TimeSpan t = h.EstTime.TimeOfDay;
-                if (t >= start && t < end)
+                var tod = h.EstTime.TimeOfDay;
+                if (tod >= start && tod < end)
                 {
                     if (h.High > high) high = h.High;
                     if (h.Low < low) low = h.Low;
@@ -199,7 +207,7 @@ namespace Time_Based_Range_Fibs_DTFX
                 EndUtc = TimeZoneInfo.ConvertTimeToUtc(date + end, _estZone)
             };
 
-            // breakout & mitigation without LINQ
+            // breakout & mitigation using precomputed _hourBars
             for (int i = 0; i < _hourBars.Count; i++)
             {
                 var h = _hourBars[i];
@@ -209,7 +217,6 @@ namespace Time_Based_Range_Fibs_DTFX
                     sb.BrokeAbove = (h.Close > high);
                     sb.BrokeBelow = (h.Close < low);
                     sb.BreakUtc = h.Utc;
-                    // find mitigation
                     for (int j = i + 1; j < _hourBars.Count; j++)
                     {
                         var m = _hourBars[j];
@@ -234,20 +241,17 @@ namespace Time_Based_Range_Fibs_DTFX
             var conv = CurrentChart.MainWindow.CoordinatesConverter;
             var rightUtc = conv.GetTime(CurrentChart.MainWindow.ClientRectangle.Right);
 
-            // select unmitigated then mitigated without LINQ
+            // pick unmitigated then mitigated (manual, no LINQ)
             int maxUn = Math.Min(MaxUnmitigatedBoxes, _allBoxes.Count);
             int maxMi = Math.Min(MaxMitigatedBoxes, _allBoxes.Count);
             var buffer = new SessionBox[maxUn + maxMi];
             int idx = 0;
-            // unmitigated
             for (int i = 0; i < _allBoxes.Count && idx < maxUn; i++)
-                if (!_allBoxes[i].Mitigated)
-                    buffer[idx++] = _allBoxes[i];
-            // mitigated
+                if (!_allBoxes[i].Mitigated) buffer[idx++] = _allBoxes[i];
             for (int i = 0; i < _allBoxes.Count && idx < buffer.Length; i++)
-                if (_allBoxes[i].Mitigated)
-                    buffer[idx++] = _allBoxes[i];
-            // sort by Date ascending (insertion sort)
+                if (_allBoxes[i].Mitigated) buffer[idx++] = _allBoxes[i];
+
+            // insertion‐sort by date ascending
             for (int i = 1; i < idx; i++)
             {
                 var tmp = buffer[i];
@@ -260,7 +264,7 @@ namespace Time_Based_Range_Fibs_DTFX
                 buffer[j + 1] = tmp;
             }
 
-            // draw each session
+            // draw each
             for (int k = 0; k < idx; k++)
             {
                 var sb = buffer[k];
@@ -270,36 +274,32 @@ namespace Time_Based_Range_Fibs_DTFX
                       y1 = (float)conv.GetChartY(sb.High),
                       y2 = (float)conv.GetChartY(sb.Low);
 
-                // fill & outline
                 Color col = sb.BrokeAbove ? BullBoxColor
                           : sb.BrokeBelow ? BearBoxColor
                           : sb.DefaultColor;
+
                 using var fill = new SolidBrush(Color.FromArgb(60, col));
                 using var pen = new Pen(col, 1);
                 gfx.FillRectangle(fill, x1, y1, x2 - x1, y2 - y1);
                 gfx.DrawRectangle(pen, x1, y1, x2 - x1, y2 - y1);
 
-                // time-label
-                Color lblColor = (sb.Label == MorningLabel) ? Color.Yellow : Color.CornflowerBlue;
+                Color lblColor = sb.Label == MorningLabel ? Color.Yellow : Color.CornflowerBlue;
                 using var lblBrush = new SolidBrush(lblColor);
                 gfx.DrawString(sb.Label, _labelFont, lblBrush, x1 + 5, y1 - 20, _stringFormat);
-
-                // date
                 gfx.DrawString(sb.Date.ToString("MM/dd"), _dateFont, Brushes.White,
                                x1 + 5, y1 - 20 + _labelFont.Height + 2, _stringFormat);
 
-                // fibs
                 if (ShowFibs)
                 {
                     double range = sb.High - sb.Low;
                     for (int f = 0; f < _fibPcts.Length; f++)
                     {
-                        double pct = _fibPcts[f];
                         bool show = (f == 0 && ShowThirty)
-                                  || (f == 1 && ShowFifty)
-                                  || (f == 2 && ShowSeventy);
+                                 || (f == 1 && ShowFifty)
+                                 || (f == 2 && ShowSeventy);
                         if (!show) continue;
-                        float yF = (float)conv.GetChartY(sb.High - pct * range);
+
+                        float yF = (float)conv.GetChartY(sb.High - _fibPcts[f] * range);
                         using var fpen = new Pen(FibLineStyle.Color, FibLineStyle.Width)
                         {
                             DashStyle = FibLineStyle.LineStyle switch
@@ -312,7 +312,7 @@ namespace Time_Based_Range_Fibs_DTFX
                             }
                         };
                         gfx.DrawLine(fpen, x1, yF, x2, yF);
-                        DrawFibLabel(gfx, $"{(int)(pct * 100)}%", x1 + 2, yF);
+                        DrawFibLabel(gfx, $"{(int)(_fibPcts[f] * 100)}%", x1 + 2, yF);
                     }
                 }
             }
@@ -323,21 +323,22 @@ namespace Time_Based_Range_Fibs_DTFX
             const int pad = 4, rad = 6;
             var sz = g.MeasureString(text, _dateFont);
             var rect = new RectangleF(x, y - sz.Height / 2, sz.Width + pad * 2, sz.Height);
+
             using var path = new GraphicsPath();
             path.AddArc(rect.Left, rect.Top, rad, rad, 180, 90);
             path.AddArc(rect.Right - rad, rect.Top, rad, rad, 270, 90);
             path.AddArc(rect.Right - rad, rect.Bottom - rad, rad, rad, 0, 90);
             path.AddArc(rect.Left, rect.Bottom - rad, rad, rad, 90, 90);
             path.CloseFigure();
+
             using var bg = new SolidBrush(Color.Gold); g.FillPath(bg, path);
             using var pen = new Pen(Color.Gold); g.DrawPath(pen, path);
             g.DrawString(text, _dateFont, Brushes.Black, x + pad, y - sz.Height / 2);
         }
 
-        //── Helper types ────────────────────────────────────────────────────────────
         private class HourBar
         {
-            public DateTime Utc, EstTime;
+            public DateTime Utc, EstTime;  // both stored up front
             public double High, Low, Close;
         }
 
