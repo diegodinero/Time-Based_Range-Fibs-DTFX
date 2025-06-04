@@ -362,7 +362,7 @@ namespace Time_Based_Range_Fibs_DTFX
 
                 // 4) Date
                 gfx.DrawString(
-                    sb.Date.ToString("MM/dd"),
+                    sb.Date.ToString("M/d"),
                     _dateFont,
                     _dateBrush,
                     x1 + 5,
