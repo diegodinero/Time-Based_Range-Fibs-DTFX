@@ -95,10 +95,7 @@ namespace Time_Based_Range_Fibs_DTFX
             SeparateWindow = false;
             IndicatorUpdateType Update = IndicatorUpdateType.OnTick;
             OnBackGround = true;
-            
         }
-
-       
 
         protected override void OnInit()
         {
@@ -124,8 +121,6 @@ namespace Time_Based_Range_Fibs_DTFX
             ReloadHistory();
             BuildHourBars();
             UpdatePensAndDrawList();
-
-            
         }
 
         protected override void OnSettingsUpdated()
@@ -139,7 +134,7 @@ namespace Time_Based_Range_Fibs_DTFX
 
         protected override void OnUpdate(UpdateArgs args)
         {
-            // recalc sessions & draw list on each hour‐bar close
+            // Recalc sessions & draw list on each hour‐bar close
             BuildSessionBoxes();
             BuildDrawList();
         }
@@ -176,7 +171,7 @@ namespace Time_Based_Range_Fibs_DTFX
         private void BuildSessionBoxes()
         {
             _allBoxes.Clear();
-            // bucket by EST date
+            // Bucket by EST date
             var buckets = new Dictionary<DateTime, List<HourBar>>();
             foreach (var h in _hourBars)
             {
@@ -185,7 +180,8 @@ namespace Time_Based_Range_Fibs_DTFX
                     buckets[d] = list = new List<HourBar>();
                 list.Add(h);
             }
-            // recent days
+
+            // Only keep the most recent HistoryLookbackDays
             var dates = new List<DateTime>(buckets.Keys);
             dates.Sort((a, b) => b.CompareTo(a));
             int used = 0;
@@ -228,7 +224,8 @@ namespace Time_Based_Range_Fibs_DTFX
                 StartUtc = TimeZoneInfo.ConvertTimeToUtc(date + start, _estZone),
                 EndUtc = TimeZoneInfo.ConvertTimeToUtc(date + end, _estZone)
             };
-            // breakout & mitigation
+
+            // Breakout & mitigation logic
             for (int i = 0; i < _hourBars.Count; i++)
             {
                 var h = _hourBars[i];
@@ -251,12 +248,13 @@ namespace Time_Based_Range_Fibs_DTFX
                     break;
                 }
             }
+
             _allBoxes.Add(sb);
         }
 
         private void UpdatePensAndDrawList()
         {
-            // rebuild fib pens
+            // Rebuild fib pens
             _fibPens.Clear();
             foreach (var ls in _fibPcts)
             {
@@ -281,30 +279,36 @@ namespace Time_Based_Range_Fibs_DTFX
             _drawBoxes.Clear();
             int maxUn = Math.Min(MaxUnmitigatedBoxes, _allBoxes.Count);
             int maxMi = Math.Min(MaxMitigatedBoxes, _allBoxes.Count);
-            // unmitigated
+
+            // Unmitigated first
             for (int i = 0, added = 0; i < _allBoxes.Count && added < maxUn; i++)
             {
                 if (!_allBoxes[i].Mitigated)
                 {
-                    _drawBoxes.Add(_allBoxes[i]); added++;
+                    _drawBoxes.Add(_allBoxes[i]);
+                    added++;
                 }
             }
-            // mitigated
+
+            // Then mitigated
             for (int i = 0, added = _drawBoxes.Count; i < _allBoxes.Count && added < maxUn + maxMi; i++)
             {
                 if (_allBoxes[i].Mitigated)
                 {
-                    _drawBoxes.Add(_allBoxes[i]); added++;
+                    _drawBoxes.Add(_allBoxes[i]);
+                    added++;
                 }
             }
-            // sort by Date asc
+
+            // Sort by Date ascending
             for (int i = 1; i < _drawBoxes.Count; i++)
             {
                 var tmp = _drawBoxes[i];
                 int j = i - 1;
                 while (j >= 0 && _drawBoxes[j].Date > tmp.Date)
                 {
-                    _drawBoxes[j + 1] = _drawBoxes[j]; j--;
+                    _drawBoxes[j + 1] = _drawBoxes[j];
+                    j--;
                 }
                 _drawBoxes[j + 1] = tmp;
             }
@@ -316,37 +320,57 @@ namespace Time_Based_Range_Fibs_DTFX
             var conv = CurrentChart.MainWindow.CoordinatesConverter;
             var rightUtc = conv.GetTime(CurrentChart.MainWindow.ClientRectangle.Right);
 
+            // Turn off antialiasing for crisp rectangles
             gfx.SmoothingMode = SmoothingMode.None;
 
             foreach (var sb in _drawBoxes)
             {
-                // compute extents
+                // Compute extents
                 var endUtc = sb.Mitigated ? sb.MitigationUtc : rightUtc;
-                float x1 = (float)conv.GetChartX(sb.StartUtc),
-                      x2 = (float)conv.GetChartX(endUtc),
-                      y1 = (float)conv.GetChartY(sb.High),
-                      y2 = (float)conv.GetChartY(sb.Low);
+                float x1 = (float)conv.GetChartX(sb.StartUtc);
+                float x2 = (float)conv.GetChartX(endUtc);
+                float y1 = (float)conv.GetChartY(sb.High);
+                float y2 = (float)conv.GetChartY(sb.Low);
 
-                // box fill & outline
+                // Choose color: bullish / bearish / default
                 var col = sb.BrokeAbove ? BullBoxColor
                          : sb.BrokeBelow ? BearBoxColor
                          : sb.DefaultColor;
-                _boxFillBrush.Color = Color.FromArgb(60, col);
-                _boxOutlinePen.Color = col;
+
+                // 1) Fill: semi‐transparent version
+                _boxFillBrush.Color = Color.FromArgb(60, col.R, col.G, col.B);
                 gfx.FillRectangle(_boxFillBrush, x1, y1, x2 - x1, y2 - y1);
+
+                // 2) Outline: force full opacity so border is visible
+                var outlineColor = Color.FromArgb(255, col.R, col.G, col.B);
+                _boxOutlinePen.Color = outlineColor;
+                _boxOutlinePen.Width = 1; // 1‐pixel wide border
                 gfx.DrawRectangle(_boxOutlinePen, x1, y1, x2 - x1, y2 - y1);
 
-                // time‐label
+                // 3) Time‐label
                 var lblBrush = sb.Label == MorningLabel
                     ? _morningLabelBrush
                     : _afternoonLabelBrush;
-                gfx.DrawString(sb.Label, _labelFont, lblBrush, x1 + 5, y1 - 20, _stringFormat);
+                gfx.DrawString(
+                    sb.Label,
+                    _labelFont,
+                    lblBrush,
+                    x1 + 5,
+                    y1 - 20,
+                    _stringFormat
+                );
 
-                // date
-                gfx.DrawString(sb.Date.ToString("MM/dd"), _dateFont, _dateBrush,
-                               x1 + 5, y1 - 20 + _labelFont.Height + 2, _stringFormat);
+                // 4) Date
+                gfx.DrawString(
+                    sb.Date.ToString("MM/dd"),
+                    _dateFont,
+                    _dateBrush,
+                    x1 + 5,
+                    y1 - 20 + _labelFont.Height + 2,
+                    _stringFormat
+                );
 
-                // fibs
+                // 5) Fibs
                 if (ShowFibs)
                 {
                     double range = sb.High - sb.Low;
@@ -356,6 +380,7 @@ namespace Time_Based_Range_Fibs_DTFX
                                   || (i == 1 && ShowFifty)
                                   || (i == 2 && ShowSeventy);
                         if (!show) continue;
+
                         float yF = (float)conv.GetChartY(sb.High - _fibPcts[i] * range);
                         gfx.DrawLine(_fibPens[i], x1, yF, x2, yF);
                         DrawFibLabel(gfx, $"{(int)(_fibPcts[i] * 100)}%", x1 + 2, yF);
@@ -368,15 +393,26 @@ namespace Time_Based_Range_Fibs_DTFX
         {
             const int pad = 4, rad = 6;
             var sz = g.MeasureString(text, _dateFont);
-            var rect = new RectangleF(x, y - sz.Height / 2, sz.Width + pad * 2, sz.Height);
+            var rect = new RectangleF(
+                x,
+                y - sz.Height / 2,
+                sz.Width + pad * 2,
+                sz.Height
+            );
+
             using var path = new GraphicsPath();
             path.AddArc(rect.Left, rect.Top, rad, rad, 180, 90);
             path.AddArc(rect.Right - rad, rect.Top, rad, rad, 270, 90);
             path.AddArc(rect.Right - rad, rect.Bottom - rad, rad, rad, 0, 90);
             path.AddArc(rect.Left, rect.Bottom - rad, rad, rad, 90, 90);
             path.CloseFigure();
-            using var bg = new SolidBrush(Color.Gold); g.FillPath(bg, path);
-            using var pen = new Pen(Color.Gold); g.DrawPath(pen, path);
+
+            using var bg = new SolidBrush(Color.Gold);
+            g.FillPath(bg, path);
+
+            using var pen = new Pen(Color.Gold);
+            g.DrawPath(pen, path);
+
             g.DrawString(text, _dateFont, Brushes.Black, x + pad, y - sz.Height / 2);
         }
 
