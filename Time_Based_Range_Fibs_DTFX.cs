@@ -53,9 +53,9 @@ namespace Time_Based_Range_Fibs_DTFX
         public int MaxMitigatedBoxes { get; set; } = 5;
 
         [InputParameter("Bullish Break Color", 12)]
-        public Color BullBoxColor { get; set; } = Color.FromArgb(0x4C, 0xAF, 0x50);
+        public Color BullBoxColor { get; set; } = Color.FromArgb(51, 0x4C, 0xAF, 0x50);
         [InputParameter("Bearish Break Color", 13)]
-        public Color BearBoxColor { get; set; } = Color.FromArgb(0xF2, 0x36, 0x45);
+        public Color BearBoxColor { get; set; } = Color.FromArgb(51, 0xF2, 0x36, 0x45);
 
         [InputParameter("Show Fibs", 14)]
         public bool ShowFibs { get; set; } = true;
@@ -93,7 +93,9 @@ namespace Time_Based_Range_Fibs_DTFX
             Name = "Time_Based_Range_Fibs_DTFX";
             Description = "Session boxes with mitigation, optional fibs, time‐labels & date.";
             SeparateWindow = false;
-            IndicatorUpdateType Update = IndicatorUpdateType.OnBarClose;
+            IndicatorUpdateType Update = IndicatorUpdateType.OnTick;
+            OnBackGround = true;
+            
         }
 
        
