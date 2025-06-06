@@ -87,6 +87,7 @@ namespace Time_Based_Range_Fibs_DTFX
             Name = "Time_Based_Range_Fibs_DTFX";
             Description = "Overlays session‐range boxes + fib levels (EST). Added: Turn Off All Fibs flag, custom emojis, toggle short date label.";
             SeparateWindow = false;
+            OnBackGround = true;
         }
 
         protected override void OnInit()
