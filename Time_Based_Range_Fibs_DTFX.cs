@@ -387,7 +387,13 @@ namespace Time_Based_Range_Fibs_DTFX
                     if (!show)
                         continue;
 
-                    float yF = (float)conv.GetChartY(b.High - range * p);
+                    // ← modified here
+                    float yF;
+                    if (b.BrokeBelow)
+                        yF = (float)conv.GetChartY(b.Low + range * p);
+                    else
+                        yF = (float)conv.GetChartY(b.High - range * p);
+
                     using var l = new Pen(FibLineStyle.Color, FibLineStyle.Width)
                     {
                         DashStyle = ConvertLineStyleToDashStyle(FibLineStyle.LineStyle)
@@ -395,6 +401,7 @@ namespace Time_Based_Range_Fibs_DTFX
                     gfx.DrawLine(l, x1, yF, x2, yF);
                     DrawFibLabel(gfx, $"{(int)(p * 100)}%", x1 + 2, yF);
                 }
+
 
                 // Draw emoji + optional date label
                 float ex = x1 + 5;
