@@ -76,7 +76,7 @@ namespace Time_Based_Range_Fibs_DTFX
         public int MaxUnmitigatedBoxes { get; set; } = 5;
 
         [InputParameter("Max Mitigated Boxes", 18)]
-        public int MaxMitigatedBoxes { get; set; } = 5;
+        public int MaxMitigatedBoxes { get; set; } = 0;
 
         //–– Date‐label style (not exposed)
         private Font DateFont = new Font("Segoe UI", 8, FontStyle.Bold);
