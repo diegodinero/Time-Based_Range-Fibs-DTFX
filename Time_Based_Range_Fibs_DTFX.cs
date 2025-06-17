@@ -67,7 +67,7 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Fib Line Color", 16)]
         public LineOptions FibLineStyle { get; set; } = new LineOptions()
         {
-            Color = Color.Yellow,
+            Color = Color.FromArgb(253, 216, 53),
             LineStyle = LineStyle.Dash,
             Width = 1,
             WithCheckBox = false
@@ -88,7 +88,7 @@ namespace Time_Based_Range_Fibs_DTFX
 
         protected override void OnInit()
         {
-            fibLabelFont = new Font("Segoe UI", 8, FontStyle.Bold);
+            fibLabelFont = new Font("Segoe UI", 7);
             emojiFont = new Font("Segoe UI Emoji", 8, FontStyle.Bold);
             stringFormat = new StringFormat()
             {
@@ -337,8 +337,8 @@ namespace Time_Based_Range_Fibs_DTFX
             path.AddArc(rect.Right - rad, rect.Bottom - rad, rad, rad, 0, 90);
             path.AddArc(rect.Left, rect.Bottom - rad, rad, rad, 90, 90);
             path.CloseFigure();
-            using (var bg = new SolidBrush(Color.Gold)) g.FillPath(bg, path);
-            using (var p = new Pen(Color.Gold)) g.DrawPath(p, path);
+            using (var bg = new SolidBrush(Color.FromArgb(220, 255, 215, 0))) g.FillPath(bg, path);
+            using (var p = new Pen(Color.FromArgb(220, 255, 215, 0))) g.DrawPath(p, path);
             g.DrawString(text, fibLabelFont, Brushes.Black, x + pad, y - sz.Height / 2);
         }
 
