@@ -88,7 +88,7 @@ namespace Time_Based_Range_Fibs_DTFX
 
         protected override void OnInit()
         {
-            fibLabelFont = new Font("Segoe UI", 7);
+            fibLabelFont = new Font("Segoe UI", 8, FontStyle.Regular);
             emojiFont = new Font("Segoe UI Emoji", 8, FontStyle.Bold);
             stringFormat = new StringFormat()
             {
