@@ -27,7 +27,7 @@ namespace Time_Based_Range_Fibs_DTFX
         private int _lastHistoryHour = -1;
         private List<SessionBox> _cachedSessions = new List<SessionBox>();
 
-        //── Session times (backed by the DateTime pickers below) ─────────────────
+        //── Session times (now fixed — no longer user inputs) ────────────────────
         private TimeSpan MorningStart = new TimeSpan(9, 0, 0);
         private TimeSpan MorningEnd = new TimeSpan(10, 0, 0);
         private TimeSpan AfternoonStart = new TimeSpan(15, 0, 0);
@@ -102,67 +102,6 @@ namespace Time_Based_Range_Fibs_DTFX
                 Symbol.HistoryType,
                 DateTime.UtcNow.AddDays(-HistoryLookbackDays)
             );
-        }
-
-        public override IList<SettingItem> Settings
-        {
-            get
-            {
-                var settings = base.Settings;
-                var sep = settings.FirstOrDefault()?.SeparatorGroup;
-
-                // compute "today" in EST
-                DateTime estToday = TimeZoneInfo.ConvertTime(DateTime.UtcNow, estZone).Date;
-
-                // Insert EST time pickers at top
-                settings.Insert(0, new SettingItemDateTime(
-                    "Afternoon Session End Time",
-                    estToday.Add(AfternoonEnd))
-                { SeparatorGroup = sep, Format = DatePickerFormat.Time });
-
-                settings.Insert(0, new SettingItemDateTime(
-                    "Afternoon Session Start Time",
-                    estToday.Add(AfternoonStart))
-                { SeparatorGroup = sep, Format = DatePickerFormat.Time });
-
-                settings.Insert(0, new SettingItemDateTime(
-                    "Morning Session End Time",
-                    estToday.Add(MorningEnd))
-                { SeparatorGroup = sep, Format = DatePickerFormat.Time });
-
-                settings.Insert(0, new SettingItemDateTime(
-                    "Morning Session Start Time",
-                    estToday.Add(MorningStart))
-                { SeparatorGroup = sep, Format = DatePickerFormat.Time });
-
-                return settings;
-            }
-            set
-            {
-                base.Settings = value;
-
-                // map DateTime pickers back into their TimeSpan
-                foreach (var dt in value.OfType<SettingItemDateTime>())
-                {
-                    var dateVal = TimeZoneInfo.ConvertTime((DateTime)dt.Value, estZone);
-                    switch (dt.Name)
-                    {
-                        case "Morning Session Start Time":
-                            MorningStart = dateVal.TimeOfDay; break;
-                        case "Morning Session End Time":
-                            MorningEnd = dateVal.TimeOfDay; break;
-                        case "Afternoon Session Start Time":
-                            AfternoonStart = dateVal.TimeOfDay; break;
-                        case "Afternoon Session End Time":
-                            AfternoonEnd = dateVal.TimeOfDay; break;
-                    }
-                }
-
-                // force a reload next paint
-                _lastHistoryHour = -1;
-
-                Refresh();
-            }
         }
 
         public override void OnPaintChart(PaintChartEventArgs args)
