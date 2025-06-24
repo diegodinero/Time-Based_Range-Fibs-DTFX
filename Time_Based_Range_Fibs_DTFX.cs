@@ -113,6 +113,8 @@ namespace Time_Based_Range_Fibs_DTFX
             var gfx = args.Graphics;
             var wnd = CurrentChart.MainWindow;
             var conv = wnd.CoordinatesConverter;
+            gfx.SmoothingMode = SmoothingMode.None;
+            gfx.PixelOffsetMode = PixelOffsetMode.HighSpeed;
 
             // compute now in EST
             DateTime nowEst = TimeZoneInfo.ConvertTime(DateTime.UtcNow, estZone);
@@ -295,9 +297,14 @@ namespace Time_Based_Range_Fibs_DTFX
                         ? b.Low + range * p
                         : b.High - range * p
                     );
+                    float dashLen = 5f;
+                    float gapLen = 7f;
+
                     using var lp = new Pen(FibLineStyle.Color, FibLineStyle.Width)
                     {
-                        DashStyle = ConvertLineStyleToDashStyle(FibLineStyle.LineStyle)
+                        DashStyle = DashStyle.Custom,
+                        DashPattern = new float[] { dashLen, gapLen },
+                        DashCap = DashCap.Flat
                     };
                     gfx.DrawLine(lp, x1, yF, x2, yF);
                     DrawFibLabel(gfx, $"{(int)(p * 100)}%", x1 + 2, yF);
