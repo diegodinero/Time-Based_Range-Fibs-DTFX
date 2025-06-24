@@ -104,6 +104,13 @@ namespace Time_Based_Range_Fibs_DTFX
             );
         }
 
+        protected override void OnSettingsUpdated()
+        {
+            base.OnSettingsUpdated();
+            // force a rebuild on the very next OnPaintChart
+            _lastHistoryHour = -1;
+        }
+
         public override void OnPaintChart(PaintChartEventArgs args)
         {
             base.OnPaintChart(args);
