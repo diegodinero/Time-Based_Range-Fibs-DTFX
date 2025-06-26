@@ -45,29 +45,32 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Show Profitable Loser Box", 7)]
         public bool ShowProfitableLoserBox { get; set; } = true;
 
-        [InputParameter("Turn Off All Fibs", 8)]
+        [InputParameter("Fill Session Boxes", 8)]
+        public bool FillSessionBoxes = true;
+
+        [InputParameter("Turn Off All Fibs", 9)]
         public bool TurnOffAllFibs { get; set; } = false;
-        [InputParameter("Show 30% Retracement", 9)]
+        [InputParameter("Show 30% Retracement", 10)]
         public bool ShowThirty { get; set; } = true;
-        [InputParameter("Show 50% Retracement", 10)]
+        [InputParameter("Show 50% Retracement", 11)]
         public bool ShowFifty { get; set; } = true;
-        [InputParameter("Show 70% Retracement", 11)]
+        [InputParameter("Show 70% Retracement", 12)]
         public bool ShowSeventy { get; set; } = true;
 
-        [InputParameter("Morning Label Emoji", 12)]
+        [InputParameter("Morning Label Emoji", 13)]
         public string MorningLabelEmoji { get; set; } = "9";
-        [InputParameter("Afternoon Label Emoji", 13)]
+        [InputParameter("Afternoon Label Emoji", 14)]
         public string AfternoonLabelEmoji { get; set; } = "3";
 
-        [InputParameter("Show Date Label", 14)]
+        [InputParameter("Show Date Label", 15)]
         public bool ShowDateLabel { get; set; } = true;
 
-        [InputParameter("Bullish Box Color", 15)]
+        [InputParameter("Bullish Box Color", 16)]
         public Color BullBoxColor { get; set; } = Color.FromArgb(51, 0x4C, 0xAF, 0x50);
-        [InputParameter("Bearish Box Color", 16)]
+        [InputParameter("Bearish Box Color", 17)]
         public Color BearBoxColor { get; set; } = Color.FromArgb(51, 0xF2, 0x36, 0x45);
 
-        [InputParameter("Fib Line Color", 17)]
+        [InputParameter("Fib Line Color", 18)]
         public LineOptions FibLineStyle { get; set; } = new LineOptions()
         {
             Color = Color.FromArgb(253, 216, 53),
@@ -76,9 +79,9 @@ namespace Time_Based_Range_Fibs_DTFX
             WithCheckBox = false
         };
 
-        [InputParameter("Max Unmitigated Boxes", 18)]
+        [InputParameter("Max Unmitigated Boxes", 19)]
         public int MaxUnmitigatedBoxes { get; set; } = 5;
-        [InputParameter("Max Mitigated Boxes", 19)]
+        [InputParameter("Max Mitigated Boxes", 20)]
         public int MaxMitigatedBoxes { get; set; } = 0;
 
         
@@ -278,9 +281,11 @@ namespace Time_Based_Range_Fibs_DTFX
                 var col = b.BrokeAbove ? BullBoxColor
                        : b.BrokeBelow ? BearBoxColor
                        : Color.Gray;
-                using (var fbBrush = new SolidBrush(Color.FromArgb(60, col)))
-                    gfx.FillRectangle(fbBrush, x1, y1, x2 - x1, y2 - y1);
-
+                if (FillSessionBoxes)
+                {
+                    using (var fbBrush = new SolidBrush(Color.FromArgb(60, col)))
+                        gfx.FillRectangle(fbBrush, x1, y1, x2 - x1, y2 - y1);
+                }
                 // border
                 int brighten = 40;
                 var bright = Color.FromArgb(
@@ -361,9 +366,11 @@ namespace Time_Based_Range_Fibs_DTFX
                     float y1 = (float)conv.GetChartY(Math.Max(open.Value, close.Value));
                     float y2 = (float)conv.GetChartY(Math.Min(open.Value, close.Value));
 
-                    using (var fillBrush = new SolidBrush(Color.FromArgb(41, 0xF0, 0x62, 0x92))) // 16% transparent
-                        gfx.FillRectangle(fillBrush, x1, y1, x2 - x1, y2 - y1);
-
+                    if (FillSessionBoxes)
+                    {
+                        using (var fillBrush = new SolidBrush(Color.FromArgb(41, 0xF0, 0x62, 0x92))) // 16% transparent
+                            gfx.FillRectangle(fillBrush, x1, y1, x2 - x1, y2 - y1);
+                    }
                     using (var borderPen = new Pen(Color.FromArgb(0xF4, 0x8F, 0xB1), 2))
                         gfx.DrawRectangle(borderPen, x1, y1, x2 - x1, y2 - y1);
                 }
