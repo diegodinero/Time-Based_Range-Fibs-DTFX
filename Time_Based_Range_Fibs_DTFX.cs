@@ -42,29 +42,32 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Show Afternoon Box", 6)]
         public bool ShowAfternoonBox { get; set; } = true;
 
-        [InputParameter("Turn Off All Fibs", 7)]
+        [InputParameter("Show Profitable Loser Box", 7)]
+        public bool ShowProfitableLoserBox { get; set; } = true;
+
+        [InputParameter("Turn Off All Fibs", 8)]
         public bool TurnOffAllFibs { get; set; } = false;
-        [InputParameter("Show 30% Retracement", 8)]
+        [InputParameter("Show 30% Retracement", 9)]
         public bool ShowThirty { get; set; } = true;
-        [InputParameter("Show 50% Retracement", 9)]
+        [InputParameter("Show 50% Retracement", 10)]
         public bool ShowFifty { get; set; } = true;
-        [InputParameter("Show 70% Retracement", 10)]
+        [InputParameter("Show 70% Retracement", 11)]
         public bool ShowSeventy { get; set; } = true;
 
-        [InputParameter("Morning Label Emoji", 11)]
+        [InputParameter("Morning Label Emoji", 12)]
         public string MorningLabelEmoji { get; set; } = "9";
-        [InputParameter("Afternoon Label Emoji", 12)]
+        [InputParameter("Afternoon Label Emoji", 13)]
         public string AfternoonLabelEmoji { get; set; } = "3";
 
-        [InputParameter("Show Date Label", 13)]
+        [InputParameter("Show Date Label", 14)]
         public bool ShowDateLabel { get; set; } = true;
 
-        [InputParameter("Bullish Box Color", 14)]
+        [InputParameter("Bullish Box Color", 15)]
         public Color BullBoxColor { get; set; } = Color.FromArgb(51, 0x4C, 0xAF, 0x50);
-        [InputParameter("Bearish Box Color", 15)]
+        [InputParameter("Bearish Box Color", 16)]
         public Color BearBoxColor { get; set; } = Color.FromArgb(51, 0xF2, 0x36, 0x45);
 
-        [InputParameter("Fib Line Color", 16)]
+        [InputParameter("Fib Line Color", 17)]
         public LineOptions FibLineStyle { get; set; } = new LineOptions()
         {
             Color = Color.FromArgb(253, 216, 53),
@@ -73,13 +76,12 @@ namespace Time_Based_Range_Fibs_DTFX
             WithCheckBox = false
         };
 
-        [InputParameter("Max Unmitigated Boxes", 17)]
+        [InputParameter("Max Unmitigated Boxes", 18)]
         public int MaxUnmitigatedBoxes { get; set; } = 5;
-        [InputParameter("Max Mitigated Boxes", 18)]
+        [InputParameter("Max Mitigated Boxes", 19)]
         public int MaxMitigatedBoxes { get; set; } = 0;
 
-        [InputParameter("Show Profitable Loser Box", 19)]
-        public bool ShowProfitableLoserBox { get; set; } = true;
+        
         public Time_Based_Range_Fibs_DTFX()
         {
             Name = "Time_Based_Range_Fibs_DTFX";
