@@ -78,6 +78,8 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Max Mitigated Boxes", 18)]
         public int MaxMitigatedBoxes { get; set; } = 0;
 
+        [InputParameter("Show Profitable Loser Box", 19)]
+        public bool ShowProfitableLoserBox { get; set; } = true;
         public Time_Based_Range_Fibs_DTFX()
         {
             Name = "Time_Based_Range_Fibs_DTFX";
@@ -327,6 +329,41 @@ namespace Time_Based_Range_Fibs_DTFX
                     string dt = b.Date.ToString("M/d");
                     using (var db = new SolidBrush(DateFontColor))
                         gfx.DrawString(dt, DateFont, db, ex, ey + emojiFont.Height + 2, stringFormat);
+                }
+            }
+            if (ShowProfitableLoserBox)
+            {
+                // Get the most recent bar from 6PM–7PM EST
+                DateTime? latest6pmSessionDate = null;
+                double? open = null, close = null;
+                for (int i = hoursHistory.Count - 1; i >= 0; i--)
+                {
+                    if (hoursHistory[i, SeekOriginHistory.Begin] is not HistoryItemBar bar)
+                        continue;
+
+                    var estTime = TimeZoneInfo.ConvertTime(bar.TimeLeft, TimeZoneInfo.Utc, estZone);
+                    if (estTime.TimeOfDay == new TimeSpan(19, 0, 0)) // bar ending at 7:00 PM EST
+                    {
+                        latest6pmSessionDate = estTime.Date;
+                        open = bar.Open;
+                        close = bar.Close;
+                        break;
+                    }
+                }
+
+                if (latest6pmSessionDate.HasValue && open.HasValue && close.HasValue)
+                {
+                    DateTime sessionStartUtc = TimeZoneInfo.ConvertTimeToUtc(latest6pmSessionDate.Value.AddHours(18), estZone);
+                    float x1 = (float)conv.GetChartX(sessionStartUtc);
+                    float x2 = wnd.ClientRectangle.Right;
+                    float y1 = (float)conv.GetChartY(Math.Max(open.Value, close.Value));
+                    float y2 = (float)conv.GetChartY(Math.Min(open.Value, close.Value));
+
+                    using (var fillBrush = new SolidBrush(Color.FromArgb(41, 0xF0, 0x62, 0x92))) // 16% transparent
+                        gfx.FillRectangle(fillBrush, x1, y1, x2 - x1, y2 - y1);
+
+                    using (var borderPen = new Pen(Color.FromArgb(0xF4, 0x8F, 0xB1), 2))
+                        gfx.DrawRectangle(borderPen, x1, y1, x2 - x1, y2 - y1);
                 }
             }
         }
