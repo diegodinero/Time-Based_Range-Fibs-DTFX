@@ -349,7 +349,7 @@ namespace Time_Based_Range_Fibs_DTFX
                         continue;
 
                     var estTime = TimeZoneInfo.ConvertTime(bar.TimeLeft, TimeZoneInfo.Utc, estZone);
-                    if (estTime.TimeOfDay == new TimeSpan(19, 0, 0)) // bar ending at 7:00 PM EST
+                    if (estTime.TimeOfDay == new TimeSpan(18, 0, 0)) // ✅ bar starting at 6:00 PM EST
                     {
                         latest6pmSessionDate = estTime.Date;
                         open = bar.Open;
@@ -363,18 +363,22 @@ namespace Time_Based_Range_Fibs_DTFX
                     DateTime sessionStartUtc = TimeZoneInfo.ConvertTimeToUtc(latest6pmSessionDate.Value.AddHours(18), estZone);
                     float x1 = (float)conv.GetChartX(sessionStartUtc);
                     float x2 = wnd.ClientRectangle.Right;
-                    float y1 = (float)conv.GetChartY(Math.Max(open.Value, close.Value));
-                    float y2 = (float)conv.GetChartY(Math.Min(open.Value, close.Value));
+                    float y1 = (float)conv.GetChartY(open.Value);
+                    float y2 = (float)conv.GetChartY(close.Value);
+
+                    float topY = Math.Min(y1, y2);
+                    float height = Math.Abs(y2 - y1);
 
                     if (FillSessionBoxes)
                     {
                         using (var fillBrush = new SolidBrush(Color.FromArgb(41, 0xF0, 0x62, 0x92))) // 16% transparent
-                            gfx.FillRectangle(fillBrush, x1, y1, x2 - x1, y2 - y1);
+                            gfx.FillRectangle(fillBrush, x1, topY, x2 - x1, height);
                     }
                     using (var borderPen = new Pen(Color.FromArgb(0xF4, 0x8F, 0xB1), 2))
-                        gfx.DrawRectangle(borderPen, x1, y1, x2 - x1, y2 - y1);
+                        gfx.DrawRectangle(borderPen, x1, topY, x2 - x1, height);
                 }
             }
+
         }
 
         private DashStyle ConvertLineStyleToDashStyle(LineStyle ls) => ls switch
