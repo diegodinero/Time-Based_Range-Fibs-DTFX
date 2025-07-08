@@ -287,7 +287,7 @@ namespace Time_Based_Range_Fibs_DTFX
                         gfx.FillRectangle(fbBrush, x1, y1, x2 - x1, y2 - y1);
                 }
                 // border
-                int brighten = 40;
+                int brighten = 1;
                 var bright = Color.FromArgb(
                     255,
                     Math.Min(col.R + brighten, 255),
