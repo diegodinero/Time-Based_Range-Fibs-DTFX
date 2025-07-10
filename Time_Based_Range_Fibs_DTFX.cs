@@ -371,10 +371,10 @@ namespace Time_Based_Range_Fibs_DTFX
 
                     if (FillSessionBoxes)
                     {
-                        using (var fillBrush = new SolidBrush(Color.FromArgb(15, 0xF0, 0x62, 0x92))) // 16% transparent
+                        using (var fillBrush = new SolidBrush(Color.FromArgb(15, 0x00, 0x00, 0xFF))) // 16% transparent
                             gfx.FillRectangle(fillBrush, x1, topY, x2 - x1, height);
                     }
-                    using (var borderPen = new Pen(Color.FromArgb(0xF4, 0x8F, 0xB1), 2))
+                    using (var borderPen = new Pen(Color.FromArgb(255, 0x29, 0x62, 0xFF), 2))
                         gfx.DrawRectangle(borderPen, x1, topY, x2 - x1, height);
                 }
             }
