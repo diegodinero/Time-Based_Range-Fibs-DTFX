@@ -84,7 +84,11 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Max Mitigated Boxes", 20)]
         public int MaxMitigatedBoxes { get; set; } = 0;
 
-        
+        //── Single toggle for both side borders ───────────────────────────────────
+        [InputParameter("Show Side Borders", 21)]
+        public bool ShowSideBorders { get; set; } = true;
+
+
         public Time_Based_Range_Fibs_DTFX()
         {
             Name = "Time_Based_Range_Fibs_DTFX";
@@ -295,7 +299,15 @@ namespace Time_Based_Range_Fibs_DTFX
                     Math.Min(col.B + brighten, 255)
                 );
                 using (var pen = new Pen(bright, 2))
-                    gfx.DrawRectangle(pen, x1, y1, x2 - x1, y2 - y1);
+                {
+                    if (ShowSideBorders)
+                    {
+                        gfx.DrawLine(pen, x1, y1, x1, y2);  // left
+                        gfx.DrawLine(pen, x2, y1, x2, y2);  // right
+                    }
+                    gfx.DrawLine(pen, x1, y1, x2, y1);      // top
+                    gfx.DrawLine(pen, x1, y2, x2, y2);      // bottom
+                }
 
                 // fib lines
                 double range = b.High - b.Low;
