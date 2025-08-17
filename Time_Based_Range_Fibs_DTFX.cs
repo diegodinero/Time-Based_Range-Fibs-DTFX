@@ -57,11 +57,6 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Show 70% Retracement", 12)]
         public bool ShowSeventy { get; set; } = true;
 
-        [InputParameter("Morning Label Emoji", 13)]
-        public string MorningLabelEmoji { get; set; } = "9";
-        [InputParameter("Afternoon Label Emoji", 14)]
-        public string AfternoonLabelEmoji { get; set; } = "3";
-
         [InputParameter("Show Date Label", 15)]
         public bool ShowDateLabel { get; set; } = true;
 
@@ -168,7 +163,7 @@ namespace Time_Based_Range_Fibs_DTFX
                         var start = (si == 0) ? MorningStart : AfternoonStart;
                         var end = (si == 0) ? MorningEnd : AfternoonEnd;
                         var show = (si == 0) ? ShowMorningBox : ShowAfternoonBox;
-                        var emoji = (si == 0) ? MorningLabelEmoji : AfternoonLabelEmoji;
+                        
 
                         if (!show || bEst.TimeOfDay < start || bEst.TimeOfDay >= end)
                             continue;
@@ -240,8 +235,7 @@ namespace Time_Based_Range_Fibs_DTFX
                         _cachedSessions.Add(new SessionBox
                         {
                             Date = date,
-                            Key = key,
-                            Label = emoji,
+                            Key = key,                          
                             High = high,
                             Low = low,
                             BrokeAbove = up,
@@ -338,16 +332,15 @@ namespace Time_Based_Range_Fibs_DTFX
                     DrawFibLabel(gfx, $"{(int)(p * 100)}%", x1 + 2, yF);
                 }
 
-                // emoji & optional date
-                float ex = x1 + 5, ey = y1 - 20;
-                using (var eb = new SolidBrush(b.Key == "Morning" ? Color.Yellow : Color.CornflowerBlue))
-                    gfx.DrawString(b.Label, emojiFont, eb, ex, ey, stringFormat);
-
                 if (ShowDateLabel)
                 {
+                    float ex = x1 + 5, ey = y1 - 10;
                     string dt = b.Date.ToString("M/d");
-                    using (var db = new SolidBrush(DateFontColor))
-                        gfx.DrawString(dt, DateFont, db, ex, ey + emojiFont.Height + 2, stringFormat);
+                    Color dateColor = (b.Key == "Morning") ? Color.Yellow : Color.CornflowerBlue;
+
+                    // Place date at old "emoji + date" spot
+                    using (var db = new SolidBrush(dateColor))
+                        gfx.DrawString(dt, DateFont, db, ex, ey + 2, stringFormat);
                 }
             }
             if (ShowProfitableLoserBox)
