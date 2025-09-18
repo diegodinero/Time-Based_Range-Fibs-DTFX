@@ -406,7 +406,7 @@ namespace Time_Based_Range_Fibs_DTFX
             path.AddArc(rect.Right - rad, rect.Bottom - rad, rad, rad, 0, 90);
             path.AddArc(rect.Left, rect.Bottom - rad, rad, rad, 90, 90);
             path.CloseFigure();
-            using (var bg = new SolidBrush(Color.FromArgb(220, 255, 215, 0))) g.FillPath(bg, path);
+            using (var bg = new SolidBrush(Color.FromArgb(170, 255, 215, 0))) g.FillPath(bg, path);
             using (var p = new Pen(Color.FromArgb(220, 255, 215, 0))) g.DrawPath(p, path);
             g.DrawString(text, fibLabelFont, Brushes.Black, x + pad, y - sz.Height / 2);
         }
