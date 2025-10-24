@@ -281,7 +281,7 @@ namespace Time_Based_Range_Fibs_DTFX
                        : Color.Gray;
                 if (FillSessionBoxes)
                 {
-                    using (var fbBrush = new SolidBrush(Color.FromArgb(30, col)))
+                    using (var fbBrush = new SolidBrush(Color.FromArgb(10, col)))
                         gfx.FillRectangle(fbBrush, x1, y1, x2 - x1, y2 - y1);
                 }
                 // border
