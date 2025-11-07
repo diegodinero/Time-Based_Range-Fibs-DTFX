@@ -1,4 +1,6 @@
-Time-Based Range Fibs
+<img width="4905" height="2517" alt="image" src="https://github.com/user-attachments/assets/419bd904-ba80-470a-944e-a7889cbe19c7" />
+
+Quantower Time-Based Range Fibs
 
 This indicator overlays time-specific price range boxes and Fibonacci retracement levels on your chart, designed to help traders identify key support and resistance zones based on specific trading sessions. It highlights price ranges formed during user-defined morning (default: 9:00–10:00 AM) and afternoon (default: 3:00–4:00 PM) sessions, with customizable Fibonacci retracement levels (30%, 50%, 70%) drawn from these ranges.
 
