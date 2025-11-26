@@ -83,6 +83,10 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Show Side Borders", 21)]
         public bool ShowSideBorders { get; set; } = true;
 
+        [InputParameter("Show Fib Labels on Right", 22)]
+        public bool ShowFibLabelsOnRight { get; set; } = true;
+
+
 
         public Time_Based_Range_Fibs_DTFX()
         {
@@ -329,7 +333,15 @@ namespace Time_Based_Range_Fibs_DTFX
                         DashCap = DashCap.Flat
                     };
                     gfx.DrawLine(lp, x1, yF, x2, yF);
-                    DrawFibLabel(gfx, $"{(int)(p * 100)}%", x1 + 2, yF);
+                    float labelOffset = 30;  // Adjust this value as necessary for padding inside the box
+                    if (ShowFibLabelsOnRight)
+                    {                     
+                        DrawFibLabel(gfx, $"{(int)(p * 100)}%", ShowFibLabelsOnRight ? x2 - labelOffset : x1 + 2, yF);
+                    }
+                    else
+                    {
+                        DrawFibLabel(gfx, $"{(int)(p * 100)}%", x1 + 2, yF);
+                    }
                 }
 
                 if (ShowDateLabel)
