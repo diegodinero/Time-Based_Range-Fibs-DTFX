@@ -121,7 +121,30 @@ namespace Time_Based_Range_Fibs_DTFX
                 LineAlignment = StringAlignment.Center
             };
 
-            // Initialize session times based on UseClassicTBRs toggle
+            // Initialize session times
+            InitializeSessionTimes();
+
+            // initial load
+            hoursHistory = Symbol.GetHistory(
+                Period.HOUR1,
+                Symbol.HistoryType,
+                DateTime.UtcNow.AddDays(-HistoryLookbackDays)
+            );
+        }
+
+        protected override void OnSettingsUpdated()
+        {
+            base.OnSettingsUpdated();
+            
+            // Reinitialize session times
+            InitializeSessionTimes();
+            
+            // force a rebuild on the very next OnPaintChart
+            _lastHistoryHour = -1;
+        }
+
+        private void InitializeSessionTimes()
+        {
             if (UseClassicTBRs)
             {
                 // Use configurable input parameters
@@ -138,37 +161,6 @@ namespace Time_Based_Range_Fibs_DTFX
                 AfternoonStart = new TimeSpan(15, 0, 0);
                 AfternoonEnd = new TimeSpan(16, 0, 0);
             }
-
-            // initial load
-            hoursHistory = Symbol.GetHistory(
-                Period.HOUR1,
-                Symbol.HistoryType,
-                DateTime.UtcNow.AddDays(-HistoryLookbackDays)
-            );
-        }
-
-        protected override void OnSettingsUpdated()
-        {
-            base.OnSettingsUpdated();
-            
-            // Reinitialize session times based on UseClassicTBRs toggle
-            if (UseClassicTBRs)
-            {
-                MorningStart = MorningStartInput.TimeOfDay;
-                MorningEnd = MorningEndInput.TimeOfDay;
-                AfternoonStart = AfternoonStartInput.TimeOfDay;
-                AfternoonEnd = AfternoonEndInput.TimeOfDay;
-            }
-            else
-            {
-                MorningStart = new TimeSpan(9, 0, 0);
-                MorningEnd = new TimeSpan(10, 0, 0);
-                AfternoonStart = new TimeSpan(15, 0, 0);
-                AfternoonEnd = new TimeSpan(16, 0, 0);
-            }
-            
-            // force a rebuild on the very next OnPaintChart
-            _lastHistoryHour = -1;
         }
 
         public override void OnPaintChart(PaintChartEventArgs args)
