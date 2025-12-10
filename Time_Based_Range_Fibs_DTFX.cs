@@ -86,6 +86,9 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("Show Fib Labels on Right", 22)]
         public bool ShowFibLabelsOnRight { get; set; } = true;
 
+        [InputParameter(" Show Classic TBRs", 23)]
+        public bool ShowClassicTBRs { get; set; } = false;
+
 
 
         public Time_Based_Range_Fibs_DTFX()
@@ -274,12 +277,57 @@ namespace Time_Based_Range_Fibs_DTFX
             foreach (var b in toDraw)
             {
                 float x1 = (float)conv.GetChartX(b.StartUtc);
-                DateTime limitUtc = b.Mitigated ? b.MitigationUtc : rightEdgeUtc;
+                
+                // For classic TBRs, stop at session end; otherwise use mitigation or chart edge
+                DateTime limitUtc;
+                if (ShowClassicTBRs)
+                {
+                    // Stop at session end (1 hour after start)
+                    limitUtc = b.StartUtc.AddHours(1);
+                }
+                else
+                {
+                    // Standard mode: stop at mitigation or extend to right edge
+                    limitUtc = b.Mitigated ? b.MitigationUtc : rightEdgeUtc;
+                }
+                
                 float x2 = (float)conv.GetChartX(limitUtc);
                 float y1 = (float)conv.GetChartY(b.High);
                 float y2 = (float)conv.GetChartY(b.Low);
 
-                // box fill
+                // Classic TBR mode: only top/bottom lines, no sides/fibs
+                if (ShowClassicTBRs)
+                {
+                    // box fill (optional)
+                    if (FillSessionBoxes)
+                    {
+                        var col3 = b.BrokeAbove ? BullBoxColor
+                               : b.BrokeBelow ? BearBoxColor
+                               : Color.Gray;
+                        using (var fbBrush = new SolidBrush(Color.FromArgb(10, col3)))
+                            gfx.FillRectangle(fbBrush, x1, y1, x2 - x1, y2 - y1);
+                    }
+
+                    // top and bottom lines only (stop at session end)
+                    int brighten = 1;
+                    var col2 = b.BrokeAbove ? BullBoxColor
+                            : b.BrokeBelow ? BearBoxColor
+                            : Color.Gray;
+                    var bright = Color.FromArgb(
+                        255,
+                        Math.Min(col2.R + brighten, 255),
+                        Math.Min(col2.G + brighten, 255),
+                        Math.Min(col2.B + brighten, 255)
+                    );
+                    using (var pen = new Pen(bright, 2))
+                    {
+                        gfx.DrawLine(pen, x1, y1, x2, y1);      // top
+                        gfx.DrawLine(pen, x1, y2, x2, y2);      // bottom
+                    }
+                    continue;  // skip the rest of the rendering for classic mode
+                }
+
+                // Standard mode: full box with sides, fibs, labels
                 var col = b.BrokeAbove ? BullBoxColor
                        : b.BrokeBelow ? BearBoxColor
                        : Color.Gray;
@@ -289,14 +337,14 @@ namespace Time_Based_Range_Fibs_DTFX
                         gfx.FillRectangle(fbBrush, x1, y1, x2 - x1, y2 - y1);
                 }
                 // border
-                int brighten = 1;
-                var bright = Color.FromArgb(
+                int brighten2 = 1;
+                var bright2 = Color.FromArgb(
                     255,
-                    Math.Min(col.R + brighten, 255),
-                    Math.Min(col.G + brighten, 255),
-                    Math.Min(col.B + brighten, 255)
+                    Math.Min(col.R + brighten2, 255),
+                    Math.Min(col.G + brighten2, 255),
+                    Math.Min(col.B + brighten2, 255)
                 );
-                using (var pen = new Pen(bright, 2))
+                using (var pen = new Pen(bright2, 2))
                 {
                     if (ShowSideBorders)
                     {
@@ -333,7 +381,7 @@ namespace Time_Based_Range_Fibs_DTFX
                         DashCap = DashCap.Flat
                     };
                     gfx.DrawLine(lp, x1, yF, x2, yF);
-                    float labelOffset = 30;  // Adjust this value as necessary for padding inside the box
+                    float labelOffset = 30;
                     if (ShowFibLabelsOnRight)
                     {                     
                         DrawFibLabel(gfx, $"{(int)(p * 100)}%", ShowFibLabelsOnRight ? x2 - labelOffset : x1 + 2, yF);
@@ -350,11 +398,11 @@ namespace Time_Based_Range_Fibs_DTFX
                     string dt = b.Date.ToString("M/d");
                     Color dateColor = (b.Key == "Morning") ? Color.Yellow : Color.CornflowerBlue;
 
-                    // Place date at old "emoji + date" spot
                     using (var db = new SolidBrush(dateColor))
                         gfx.DrawString(dt, DateFont, db, ex, ey + 2, stringFormat);
                 }
             }
+
             if (ShowProfitableLoserBox)
             {
                 // Get the most recent bar from 6PM–7PM EST
