@@ -37,35 +37,38 @@ namespace Time_Based_Range_Fibs_DTFX
         [InputParameter("History Lookback (days)", 4)]
         public int HistoryLookbackDays { get; set; } = 5;
 
-        [InputParameter("Show Morning Box", 5)]
+        [InputParameter(" Show Classic TBRs", 5)]
+        public bool ShowClassicTBRs { get; set; } = false;
+
+        [InputParameter("Show Morning Box", 6)]
         public bool ShowMorningBox { get; set; } = true;
-        [InputParameter("Show Afternoon Box", 6)]
+        [InputParameter("Show Afternoon Box", 7)]
         public bool ShowAfternoonBox { get; set; } = true;
 
-        [InputParameter("Show Profitable Loser Box", 7)]
-        public bool ShowProfitableLoserBox { get; set; } = true;
+        [InputParameter("Show Profitable Loser Box", 8)]
+        public bool ShowProfitableLoserBox { get; set; } = false;
 
-        [InputParameter("Fill Session Boxes", 8)]
+        [InputParameter("Fill Session Boxes", 9)]
         public bool FillSessionBoxes = true;
 
-        [InputParameter("Turn Off All Fibs", 9)]
+        [InputParameter("Turn Off All Fibs", 10)]
         public bool TurnOffAllFibs { get; set; } = false;
-        [InputParameter("Show 30% Retracement", 10)]
+        [InputParameter("Show 30% Retracement", 11)]
         public bool ShowThirty { get; set; } = true;
-        [InputParameter("Show 50% Retracement", 11)]
+        [InputParameter("Show 50% Retracement", 12)]
         public bool ShowFifty { get; set; } = true;
-        [InputParameter("Show 70% Retracement", 12)]
+        [InputParameter("Show 70% Retracement", 13)]
         public bool ShowSeventy { get; set; } = true;
 
-        [InputParameter("Show Date Label", 15)]
+        [InputParameter("Show Date Label", 14)]
         public bool ShowDateLabel { get; set; } = true;
 
-        [InputParameter("Bullish Box Color", 16)]
+        [InputParameter("Bullish Box Color", 15)]
         public Color BullBoxColor { get; set; } = Color.FromArgb(51, 0x4C, 0xAF, 0x50);
-        [InputParameter("Bearish Box Color", 17)]
+        [InputParameter("Bearish Box Color", 16)]
         public Color BearBoxColor { get; set; } = Color.FromArgb(51, 0xF2, 0x36, 0x45);
 
-        [InputParameter("Fib Line Color", 18)]
+        [InputParameter("Fib Line Color", 17)]
         public LineOptions FibLineStyle { get; set; } = new LineOptions()
         {
             Color = Color.FromArgb(253, 216, 53),
@@ -74,20 +77,17 @@ namespace Time_Based_Range_Fibs_DTFX
             WithCheckBox = false
         };
 
-        [InputParameter("Max Unmitigated Boxes", 19)]
+        [InputParameter("Max Unmitigated Boxes", 18)]
         public int MaxUnmitigatedBoxes { get; set; } = 5;
-        [InputParameter("Max Mitigated Boxes", 20)]
+        [InputParameter("Max Mitigated Boxes", 19)]
         public int MaxMitigatedBoxes { get; set; } = 0;
 
         //── Single toggle for both side borders ───────────────────────────────────
-        [InputParameter("Show Side Borders", 21)]
+        [InputParameter("Show Side Borders", 20)]
         public bool ShowSideBorders { get; set; } = true;
 
-        [InputParameter("Show Fib Labels on Right", 22)]
+        [InputParameter("Show Fib Labels on Right", 21)]
         public bool ShowFibLabelsOnRight { get; set; } = true;
-
-        [InputParameter(" Show Classic TBRs", 23)]
-        public bool ShowClassicTBRs { get; set; } = false;
 
 
 
